@@ -1,0 +1,41 @@
+{
+    "private": true,
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build"
+    },
+    "devDependencies": {
+        "@babel/preset-react": "^7.28.5",
+        "@headlessui/react": "^1.4.2",
+        "@inertiajs/react": "^1.0.0",
+        "@radix-ui/react-accordion": "^1.2.12",
+        "@radix-ui/react-slot": "^1.2.3",
+        "@tailwindcss/forms": "^0.5.10",
+        "@types/react": "^18.2.0",
+        "@types/react-dom": "^18.2.0",
+        "@vitejs/plugin-react": "^4.2.0",
+        "autoprefixer": "^10.4.19",
+        "axios": "^0.25",
+        "laravel-vite-plugin": "^1.0.2",
+        "lodash": "^4.17.19",
+        "postcss": "^8.4.38",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "tailwindcss": "^3.4.4",
+        "vite": "^5.2.10"
+    },
+    "babel": {
+        "presets": [
+            "@babel/preset-env",
+            "@babel/preset-react"
+        ]
+    },
+    "dependencies": {
+        "class-variance-authority": "^0.7.1",
+        "clsx": "^2.1.1",
+        "framer-motion": "^10.12.16",
+        "lucide-react": "^0.547.0",
+        "tailwind-merge": "^2.3.0",
+        "tailwindcss-animate": "^1.0.7"
+    }
+}
