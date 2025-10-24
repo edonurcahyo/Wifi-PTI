@@ -6,7 +6,6 @@ const AdminLayout = ({ user, header, children }) => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const { url } = usePage();
 
-    // Fix: Menggunakan optional chaining untuk mencegah error 'reading name of undefined'
     const userName = user?.name || 'Administrator'; 
 
     const navigation = [
