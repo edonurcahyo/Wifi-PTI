@@ -3,7 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable; // admin juga bisa login
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Foundation\Auth\User as Authenticatable; 
 use Illuminate\Notifications\Notifiable;
 
 class Admin extends Authenticatable
@@ -23,8 +24,14 @@ class Admin extends Authenticatable
 
     protected $hidden = ['password'];
 
+    public function setPasswordAttribute($value)
+    {
+        $this->attributes['password'] = Hash::make($value);
+    }
+
     public function logAktivitas()
     {
         return $this->hasMany(LogAktivitas::class, 'id_admin');
     }
 }
+

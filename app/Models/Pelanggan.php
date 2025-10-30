@@ -3,8 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable; // karena pelanggan juga bisa login
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Hash;
 
 class Pelanggan extends Authenticatable
 {
@@ -26,6 +27,18 @@ class Pelanggan extends Authenticatable
     ];
 
     protected $hidden = ['password'];
+
+    // ✅ PERBAIKI: Sesuaikan cast dengan data sebenarnya
+    protected $casts = [
+        'status_aktif' => 'string', // Karena di database berupa 'Aktif'/'Nonaktif'
+        'tanggal_daftar' => 'datetime',
+    ];
+
+    // ✅ AUTO HASH PASSWORD
+    public function setPasswordAttribute($value)
+    {
+        $this->attributes['password'] = Hash::make($value);
+    }
 
     public function paket()
     {

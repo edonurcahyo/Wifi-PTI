@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { useState } from "react";
 import {
@@ -32,6 +31,7 @@ import {
   AccordionTrigger,
 } from "@/Components/ui/accordion";
 // import Link from "next/link";
+import { Link } from '@inertiajs/react';
 
 export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -62,7 +62,7 @@ export default function Home() {
           <div className="flex items-center gap-2">
             <Wifi className="h-8 w-8 text-[#38adc3]" />
             <span className="text-2xl font-bold">
-              Wi<span className="gradient-text">Fi</span>an
+              AS<span className="gradient-text">TIN</span>et
             </span>
           </div>
           <nav className="hidden md:flex gap-6">
@@ -83,7 +83,7 @@ export default function Home() {
             </a>
           </nav>
           <div className="flex items-center gap-4">
-            <Button className="hidden md:inline-flex bg-[#38adc3] hover:bg-[#2e9bb0] text-white">
+            <Button className="hidden md:inline-flex bg-[#38adc3] hover:bg-[#2e9bb0] text-white" onClick={() => window.location.href = "/pelanggan/login"}>
               Sign In
             </Button>
             <button
@@ -143,9 +143,15 @@ export default function Home() {
               >
                 Contact
               </a>
-              <Button className="bg-[#38adc3] hover:bg-[#2e9bb0] text-white w-full">
+              <Link 
+                href={route('customer.login')} 
+                className="inline-flex justify-center items-center h-10 px-4 py-2 
+                           bg-[#38adc3] hover:bg-[#2e9bb0] text-white w-full 
+                           rounded-lg font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-[#38adc3] focus:ring-offset-2"
+                onClick={() => setMobileMenuOpen(false)} 
+            >
                 Sign In
-              </Button>
+            </Link>
             </nav>
           </motion.div>
         )}
@@ -172,7 +178,7 @@ export default function Home() {
               className="text-5xl md:text-7xl font-bold mb-6 leading-tight"
             >
               Solusi Internet Cepat & Handal Bersama{" "}
-              <span className="gradient-text">WiFian</span>
+              <span className="gradient-text">ASTINet</span>
             </motion.h1>
             <motion.p
               variants={fadeInUp}
@@ -182,11 +188,11 @@ export default function Home() {
               dan layanan pelanggan 24/7. Cocok untuk rumah, bisnis, maupun kantor.
             </motion.p>
             <motion.div variants={fadeInUp} className="flex gap-4 justify-center flex-wrap">
-              <Button size="lg" className="bg-[#38adc3] hover:bg-[#2e9bb0] text-white px-8">
+              <Button size="lg" className="bg-[#38adc3] hover:bg-[#2e9bb0] text-white px-8" onClick={() => window.location.href = "#pricing"}>
                 Lihat Paket
                 <ChevronRight className="ml-2 h-5 w-5" />
               </Button>
-              <Button size="lg" variant="outline" className="border-[#38adc3] text-[#38adc3] hover:bg-[#38adc3] hover:text-white">
+              <Button size="lg" variant="outline" className="border-[#38adc3] text-[#38adc3] hover:bg-[#38adc3] hover:text-white" onClick={() => window.location.href = "/pelanggan/login"}>
                 Daftar
               </Button>
             </motion.div>
@@ -225,13 +231,13 @@ export default function Home() {
           >
             <motion.div variants={fadeInUp}>
               <p className="text-sm font-semibold text-[#38adc3] mb-2 uppercase tracking-wide">
-                Tentang WiFian
+                Tentang ASTINet
               </p>
               <h2 className="text-4xl font-bold mb-6">
                 Solusi Internet Cepat dan Handal
               </h2>
               <p className="text-gray-600 mb-6 leading-relaxed">
-                WiFian hadir sebagai penyedia layanan internet (ISP) lokal yang fokus pada
+                ASTINet hadir sebagai penyedia layanan internet (ISP) lokal yang fokus pada
                 kecepatan, stabilitas, dan pelayanan terbaik. Kami memahami betapa pentingnya
                 koneksi internet dalam kehidupan sehari-hari baik untuk bekerja, belajar, maupun hiburan.
               </p>
@@ -252,7 +258,7 @@ export default function Home() {
               </div>
               <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-[#38adc3]/10 to-[#2672c6]/10 rounded-lg">
                 <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#38adc3] to-[#2672c6] flex items-center justify-center text-white font-bold text-2xl">
-                  15+
+                  5+
                 </div>
                 <div>
                   <p className="font-bold">Tahun Pengalaman</p>
@@ -264,7 +270,7 @@ export default function Home() {
               <div className="aspect-square rounded-2xl overflow-hidden shadow-2xl">
                 <img
                   src="https://ext.same-assets.com/2769669130/1942010007.webp"
-                  alt="About WiFian"
+                  alt="About ASTINet"
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -288,7 +294,7 @@ export default function Home() {
               Fitur Unggulan
             </motion.p>
             <motion.h2 variants={fadeInUp} className="text-4xl font-bold mb-4">
-              12 Keunggulan WiFian
+              12 Keunggulan ASTINet
             </motion.h2>
             <motion.p variants={fadeInUp} className="text-gray-600 max-w-2xl mx-auto">
               Solusi internet cepat dan stabil untuk kebutuhan rumah, bisnis, hingga komunitas Anda
@@ -316,7 +322,7 @@ export default function Home() {
               {
                 icon: Clock,
                 title: "Support 24 Jam",
-                description: "Tim WiFian selalu siap membantu Anda kapan saja, termasuk tengah malam. Respons cepat dan ramah.",
+                description: "Tim ASTINet selalu siap membantu Anda kapan saja, termasuk tengah malam. Respons cepat dan ramah.",
               },
               {
                 icon: Bot,
@@ -422,7 +428,7 @@ export default function Home() {
               },
               {
                 title: "Pemasangan & Monitoring",
-                description: "Tim WiFian siap melakukan instalasi, upgrade, dan pengecekan jaringan secara cepat.",
+                description: "Tim ASTINet siap melakukan instalasi, upgrade, dan pengecekan jaringan secara cepat.",
               },
             ].map((service, i) => (
               <motion.div key={i} variants={fadeInUp}>
@@ -472,20 +478,20 @@ export default function Home() {
               {
                 name: "Basic",
                 price: "150.000",
-                speed: "30 Mbps",
+                speed: "20 Mbps",
                 features: ["Unlimited tanpa FUP", "Support via WhatsApp", "Cocok untuk browsing & streaming"],
               },
               {
                 name: "Standard",
-                price: "170.000",
-                speed: "50 Mbps",
+                price: "200.000",
+                speed: "30 Mbps",
                 popular: true,
                 features: ["Unlimited tanpa FUP", "Stabil di jam sibuk", "Tim support siap bantu", "Tanpa biaya tambahan"],
               },
               {
                 name: "Premium",
-                price: "280.000",
-                speed: "100 Mbps",
+                price: "250.000",
+                speed: "50 Mbps",
                 features: [
                   "Bandwidth stabil dan prioritas",
                   "Kunjungan teknisi gratis",
@@ -553,7 +559,7 @@ export default function Home() {
               Testimoni
             </motion.p>
             <motion.h2 variants={fadeInUp} className="text-4xl font-bold">
-              Apa Kata Pengguna WiFian
+              Apa Kata Pengguna ASTINet
             </motion.h2>
           </motion.div>
 
@@ -568,32 +574,32 @@ export default function Home() {
               {
                 name: "Rendy Pratama",
                 role: "Remote Worker",
-                text: "Sejak pakai WiFian, kerjaan online jadi lancar tanpa putus-putus. Support-nya juga responsif banget kalau ada kendala.",
+                text: "Sejak pakai ASTINet, kerjaan online jadi lancar tanpa putus-putus. Support-nya juga responsif banget kalau ada kendala.",
               },
               {
                 name: "Rahmat",
                 role: "Mahasiswa",
-                text: "Koneksi WiFian di kosan saya stabil banget. Streaming, Zoom, dan game nggak pernah buffering. Mantap!",
+                text: "Koneksi ASTINet di kosan saya stabil banget. Streaming, Zoom, dan game nggak pernah buffering. Mantap!",
               },
               {
                 name: "Budi Santoso",
                 role: "Owner Toko Online",
-                text: "WiFian bantu bisnis kecil saya tetap online. Transaksi lancar dan pelanggan puas karena WiFi toko stabil.",
+                text: "ASTINet bantu bisnis kecil saya tetap online. Transaksi lancar dan pelanggan puas karena WiFi toko stabil.",
               },
               {
                 name: "Dewi Kurnia",
                 role: "Ibu Rumah Tangga",
-                text: "Customer service WiFian cepat tanggap. Baru laporan gangguan pagi, sore langsung beres. Salut!",
+                text: "Customer service ASTINet cepat tanggap. Baru laporan gangguan pagi, sore langsung beres. Salut!",
               },
               {
                 name: "Putri Ayu",
                 role: "Teknisi IT",
-                text: "Sebagai teknisi, saya tahu kualitas jaringan. Dan jujur, WiFian jaringannya bersih dan minim masalah.",
+                text: "Sebagai teknisi, saya tahu kualitas jaringan. Dan jujur, ASTINet jaringannya bersih dan minim masalah.",
               },
               {
                 name: "Puji Astuti",
                 role: "Founder Startup",
-                text: "Startup kami butuh koneksi cepat & stabil. Pilihan jatuh ke WiFian karena performanya konsisten.",
+                text: "Startup kami butuh koneksi cepat & stabil. Pilihan jatuh ke ASTINet karena performanya konsisten.",
               },
             ].map((testimonial, i) => (
               <motion.div key={i} variants={fadeInUp}>
@@ -647,7 +653,7 @@ export default function Home() {
             <Accordion type="single" collapsible className="space-y-4">
               {[
                 {
-                  q: "Apakah WiFian tersedia di daerah saya?",
+                  q: "Apakah ASTINet tersedia di daerah saya?",
                   a: "Silakan hubungi tim kami melalui WhatsApp atau formulir kontak untuk memastikan ketersediaan layanan di lokasi Anda. Kami terus memperluas jangkauan tiap bulannya.",
                 },
                 {
@@ -655,20 +661,20 @@ export default function Home() {
                   a: "Biaya pemasangan bervariasi tergantung area dan jenis paket. Namun umumnya mulai dari Rp100.000. Promo bebas biaya pasang juga tersedia di waktu tertentu.",
                 },
                 {
-                  q: "Apakah semua paket WiFian unlimited?",
-                  a: "Ya, seluruh paket WiFian bersifat unlimited tanpa FUP, sehingga Anda bisa menggunakan internet sepuasnya tanpa takut kuota habis atau kecepatan turun.",
+                  q: "Apakah semua paket ASTINet unlimited?",
+                  a: "Ya, seluruh paket ASTINet bersifat unlimited tanpa FUP, sehingga Anda bisa menggunakan internet sepuasnya tanpa takut kuota habis atau kecepatan turun.",
                 },
                 {
                   q: "Bagaimana jika koneksi saya bermasalah?",
-                  a: "Tim support WiFian siap membantu Anda setiap hari. Cukup hubungi kami melalui WhatsApp, dan teknisi kami akan segera memeriksa kendala Anda secara remote atau onsite.",
+                  a: "Tim support ASTINet siap membantu Anda setiap hari. Cukup hubungi kami melalui WhatsApp, dan teknisi kami akan segera memeriksa kendala Anda secara remote atau onsite.",
                 },
                 {
                   q: "Apakah tersedia layanan untuk bisnis dan kantor?",
                   a: "Tentu! Kami menyediakan paket khusus untuk UMKM, kantor, dan lembaga pendidikan dengan kecepatan tinggi, SLA uptime, dan dukungan prioritas.",
                 },
                 {
-                  q: "Bagaimana cara berlangganan WiFian?",
-                  a: "Anda bisa mendaftar langsung melalui website, hubungi kami via WhatsApp, atau datang ke kantor WiFian terdekat. Prosesnya cepat dan mudah!",
+                  q: "Bagaimana cara berlangganan ASTINet?",
+                  a: "Anda bisa mendaftar langsung melalui website, hubungi kami via WhatsApp, atau datang ke kantor ASTINet terdekat. Prosesnya cepat dan mudah!",
                 },
               ].map((faq, i) => (
                 <AccordionItem key={i} value={`item-${i}`} className="bg-white px-6 rounded-lg border">
@@ -695,7 +701,7 @@ export default function Home() {
             variants={stagger}
           >
             <motion.h2 variants={fadeInUp} className="text-4xl font-bold mb-6">
-              Siap Beralih ke WiFian?
+              Siap Beralih ke ASTINet?
             </motion.h2>
             <motion.p variants={fadeInUp} className="text-xl mb-8 opacity-90">
               Hubungi kami sekarang dan nikmati internet cepat & stabil
@@ -726,24 +732,24 @@ export default function Home() {
                 </span>
               </div>
               <p className="text-sm mb-4">
-                Jl.Kav.Chandra Mustika No.C18, Mustikasari
-                <br />
-                Kec. Mustika jaya Kota Bekasi Jawa Barat 17157
+                Wilayut, Sukodono
+                {/* <br />
+                Kec. */}
               </p>
               <div className="space-y-2 text-sm">
                 <p>
                   <Phone className="inline h-4 w-4 mr-2" />
-                  +62 817-212-386
+                  +62 813-8255-2884
                 </p>
                 <p>
                   <Mail className="inline h-4 w-4 mr-2" />
-                  info@wifian.co.id
+                  info@ASTINet.co.id
                 </p>
               </div>
             </div>
 
             <div>
-              <h3 className="font-semibold text-white mb-4">WiFian</h3>
+              <h3 className="font-semibold text-white mb-4">ASTINet</h3>
               <ul className="space-y-2 text-sm">
                 <li>
                   <a href="#" className="hover:text-[#38adc3] transition-colors">
@@ -823,10 +829,10 @@ export default function Home() {
 
           <div className="border-t border-gray-800 pt-8 text-center text-sm">
             <p>
-              © Copyright <span className="font-semibold text-white">WiFian</span> All Rights Reserved
+              © Copyright <span className="font-semibold text-white">ASTINet</span> All Rights Reserved
             </p>
             <p className="mt-2">
-              Designed by WiFian | Distributed By WiFian
+              Designed by ASTINet | Distributed By ASTINet
             </p>
           </div>
         </div>
@@ -834,7 +840,7 @@ export default function Home() {
 
       {/* WhatsApp Float Button */}
       <a
-        href="https://wa.me/62817212386"
+        href="https://wa.me/6281382552884"
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-8 right-8 w-14 h-14 bg-green-500 rounded-full flex items-center justify-center shadow-lg hover:bg-green-600 transition-colors z-50 bounce-slow"

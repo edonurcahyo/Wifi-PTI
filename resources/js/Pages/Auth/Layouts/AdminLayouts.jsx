@@ -6,11 +6,11 @@ const AdminLayout = ({ user, header, children }) => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const { url } = usePage();
 
-    const userName = user?.name || 'Administrator'; 
+    const userName = user?.nama_admin || user?.name || 'Administrator'; 
 
     const navigation = [
-        { name: 'Dashboard', href: route('admin.dashboard'), icon: Home, current: url.startsWith('/admin/dashboard') },
-        { name: 'Paket Internet', href: route('admin.packages.index'), icon: Package, current: url.startsWith('/admin/packages') },
+        { name: 'Dashboard', href: route('admin.dashboard'), icon: Home, current: url === '/admin/dashboard' },
+        { name: 'Paket Internet', href: route('admin.paket.index'), icon: Package, current: url.startsWith('/admin/paket') }, // ✅ PERBAIKI DI SINI
         { name: 'Pelanggan', href: '#', icon: Users, current: url.startsWith('/admin/customers') },
         { name: 'Pembayaran', href: '#', icon: DollarSign, current: url.startsWith('/admin/payments') },
         { name: 'Pengaturan', href: '#', icon: Settings, current: url.startsWith('/admin/settings') },
@@ -25,12 +25,12 @@ const AdminLayout = ({ user, header, children }) => {
             {/* Sidebar Desktop */}
             <aside
                 className={`fixed inset-y-0 left-0 z-30 w-64 bg-white dark:bg-gray-800 shadow-xl transform ${
-                    sidebarOpen ? 'translate-x-0 ease-out' : '-translate-x-full ease-in'
+                    sidebarOpen ? 'translate-x-0 ease-out' : '-translate-x-0 ease-in'
                 } transition duration-200 lg:relative lg:translate-x-0 lg:transition-none`}
             >
                 <div className="flex items-center justify-center h-16 border-b border-gray-200 dark:border-gray-700">
                     <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                        WIFI ADMIN
+                        ASTINet ADMIN
                     </span>
                 </div>
                 <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
@@ -89,7 +89,7 @@ const AdminLayout = ({ user, header, children }) => {
                         </h1>
                     </div>
                     
-                    {/* Info User (MENGGUNAKAN userName YANG AMAN) */}
+                    {/* Info User */}
                     <div className="text-sm text-gray-700 dark:text-gray-200">
                         Admin: <span className="font-medium text-blue-600 dark:text-blue-400">{userName}</span>
                     </div>
