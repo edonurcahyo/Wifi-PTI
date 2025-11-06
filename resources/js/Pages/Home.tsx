@@ -206,7 +206,7 @@ export default function Home() {
                 ))}
               </div>
               <div className="text-left">
-                <p className="text-2xl font-bold">100,000+</p>
+                <p className="text-2xl font-bold">100+</p>
                 <p className="text-sm text-gray-600">Pelanggan Terpercaya</p>
               </div>
             </motion.div>

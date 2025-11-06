@@ -100,7 +100,7 @@ export default function CustomerDashboard() {
   const paketInternet = [
     {
       nama: "Basic",
-      kecepatan: "30 Mbps",
+      kecepatan: "20 Mbps",
       harga: 150000,
       fitur: ["Up to 30 Mbps", "Unlimited Quota", "Akses 24/7", "Support Teknis"],
       populer: false,
@@ -108,16 +108,16 @@ export default function CustomerDashboard() {
     },
     {
       nama: "Standard",
-      kecepatan: "50 Mbps",
-      harga: 250000,
+      kecepatan: "30 Mbps",
+      harga: 200000,
       fitur: ["Up to 50 Mbps", "Unlimited Quota", "Akses 24/7", "Support Teknis", "Priority Support"],
       populer: true,
       warna: "from-purple-500 to-pink-500",
     },
     {
       nama: "Premium",
-      kecepatan: "100 Mbps",
-      harga: 350000,
+      kecepatan: "50 Mbps",
+      harga: 250000,
       fitur: ["Up to 100 Mbps", "Unlimited Quota", "Akses 24/7", "Support Teknis", "Priority Support", "Static IP"],
       populer: false,
       warna: "from-orange-500 to-red-500",

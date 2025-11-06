@@ -10,10 +10,10 @@ const AdminLayout = ({ user, header, children }) => {
 
     const navigation = [
         { name: 'Dashboard', href: route('admin.dashboard'), icon: Home, current: url === '/admin/dashboard' },
-        { name: 'Paket Internet', href: route('admin.paket.index'), icon: Package, current: url.startsWith('/admin/paket') }, // ✅ PERBAIKI DI SINI
-        { name: 'Pelanggan', href: '#', icon: Users, current: url.startsWith('/admin/customers') },
-        { name: 'Pembayaran', href: '#', icon: DollarSign, current: url.startsWith('/admin/payments') },
-        { name: 'Pengaturan', href: '#', icon: Settings, current: url.startsWith('/admin/settings') },
+        { name: 'Paket Internet', href: route('admin.paket.index'), icon: Package, current: url.startsWith('/admin/paket') }, 
+        { name: 'Pelanggan', href: route('admin.pelanggan.index'), icon: Users, current: url.startsWith('/admin/pelanggan') },
+        { name: 'Pembayaran', href: route('admin.pembayaran.index'), icon: DollarSign, current: url.startsWith('/admin/pembayaran') },
+        { name: 'Pengaturan', href: route('admin.settings.index'), icon: Settings, current: url.startsWith('/admin/settings') },
     ];
 
     const toggleSidebar = () => {
