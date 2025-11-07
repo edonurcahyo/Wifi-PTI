@@ -50,7 +50,7 @@ import { PageProps } from '@inertiajs/core';
 interface Paket {
   nama_paket: string;
   kecepatan: string;
-  harga: number;
+  harga_bulanan: number;
 }
 
 interface Pelanggan {
@@ -75,6 +75,16 @@ export default function CustomerDashboard() {
   const fadeInUp = {
     hidden: { opacity: 0, y: 60 },
     visible: { opacity: 1, y: 0 },
+  };
+
+  const formatRupiah = (angka: number) => {
+    if (!angka) return 'Rp 0';
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(angka);
   };
 
   const fadeIn = {
@@ -409,26 +419,34 @@ export default function CustomerDashboard() {
           >
             <Card className="border-2 border-[#38adc3] shadow-xl hover:shadow-2xl transition-all duration-300">
               <CardHeader className="text-center pb-8 pt-12 bg-gradient-to-r from-[#38adc3] to-[#2672c6] text-white rounded-t-lg">
-                <CardTitle className="text-2xl mb-4">
-                  {pelanggan.paket?.nama_paket || "Belum Berlangganan"}
-                </CardTitle>
-                <div className="mb-2">
-                  <span className="text-5xl font-bold">
-                    Rp {pelanggan.paket?.harga?.toLocaleString() || "0"}
-                  </span>
-                  <span className="text-blue-100 ml-2">/ bulan</span>
-                </div>
-                <p className="text-blue-100 font-semibold text-lg">
-                  {pelanggan.paket?.kecepatan || "0 Mbps"}
-                </p>
-                <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium mt-4 ${
-                  pelanggan.status_aktif 
-                    ? 'bg-green-500 text-white' 
-                    : 'bg-red-500 text-white'
-                }`}>
-                  {pelanggan.status_aktif ? '🟢 Aktif' : '🔴 Tidak Aktif'}
-                </div>
-              </CardHeader>
+                  <CardTitle className="text-2xl mb-4">
+                    {pelanggan.paket?.nama_paket || "Belum Berlangganan"}
+                  </CardTitle>
+                  
+                  {/* Perbaiki formatting harga */}
+                  <div className="mb-2">
+                    <span className="text-5xl font-bold">
+                      {pelanggan.paket ? (
+                        formatRupiah(pelanggan.paket.harga_bulanan) 
+                      ) : (
+                        "Rp 0"
+                      )}
+                    </span>
+                    <span className="text-blue-100 ml-2 text-lg">/ bulan</span>
+                  </div>
+                  
+                  <p className="text-blue-100 font-semibold text-lg">
+                    {pelanggan.paket?.kecepatan || "0 Mbps"}
+                  </p>
+                  
+                  <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium mt-4 ${
+                    pelanggan.status_aktif 
+                      ? 'bg-green-500 text-white' 
+                      : 'bg-red-500 text-white'
+                  }`}>
+                    {pelanggan.status_aktif ? '🟢 Aktif' : '🔴 Tidak Aktif'}
+                  </div>
+                </CardHeader>
               <CardContent className="space-y-6 p-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
                   <div className="space-y-3">
@@ -513,9 +531,9 @@ export default function CustomerDashboard() {
                 
                 <div className="text-center mb-6">
                   <h3 className="text-2xl font-bold text-gray-900 mb-2">{paket.nama}</h3>
-                  <div className="flex items-baseline justify-center gap-1 mb-4">
+                   <div className="flex items-baseline justify-center gap-1 mb-4">
                     <span className="text-4xl font-bold text-gray-900">
-                      Rp {paket.harga.toLocaleString()}
+                      {formatRupiah(paket.harga)} 
                     </span>
                     <span className="text-gray-600">/bulan</span>
                   </div>

@@ -8,12 +8,13 @@ const Index = ({ auth, pelanggan, success }) => {
     const [searchTerm, setSearchTerm] = useState('');
     
     const formatRupiah = (angka) => {
-        if (!angka) return 'Rp 0';
-        return new Intl.NumberFormat('id-ID', {
-            style: 'currency',
-            currency: 'IDR',
-            minimumFractionDigits: 0
-        }).format(angka);
+    if (!angka) return 'Rp 0';
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(angka);
     };
 
     const handleStatusToggle = (id_pelanggan, nama_pelanggan) => {
@@ -154,20 +155,26 @@ const Index = ({ auth, pelanggan, success }) => {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 {plg.paket ? (
-                                                    <div>
-                                                        <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                                            {plg.paket.nama_paket}
-                                                        </div>
-                                                        <div className="text-sm text-blue-600 dark:text-blue-400">
-                                                            {formatRupiah(plg.paket.harga_bulanan)}/bln
-                                                        </div>
+                                                    <div className="space-y-1">
+                                                    <div className="font-medium text-gray-900 dark:text-white">
+                                                        {plg.paket.nama_paket}
+                                                    </div>
+                                                    <div className="flex items-baseline gap-1">
+                                                        <span className="text-blue-600 dark:text-blue-400 font-semibold">
+                                                        {formatRupiah(plg.paket.harga_bulanan)}
+                                                        </span>
+                                                        <span className="text-gray-500 text-xs">/bulan</span>
+                                                    </div>
+                                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                        {plg.paket.kecepatan}
+                                                    </div>
                                                     </div>
                                                 ) : (
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                                                        Belum Berlangganan
+                                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 border border-yellow-200">
+                                                    Belum Berlangganan
                                                     </span>
                                                 )}
-                                            </td>
+                                                </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                                     plg.status_aktif === 'Aktif'

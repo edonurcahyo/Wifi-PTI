@@ -48,11 +48,11 @@ class AdminPembayaranController extends Controller
             ->orderBy('nama_pelanggan')
             ->get();
 
-        $paketList = PaketInternet::orderBy('harga_bulanan')->get(); // ✅ AMBIL SEMUA PAKET DARI DB
+        $paketList = PaketInternet::orderBy('harga_bulanan')->get();
 
         return Inertia::render('Admin/Pembayaran/Create', [
             'pelanggan' => $pelanggan,
-            'paketList' => $paketList, // ✅ KIRIM DATA PAKET KE FRONTEND
+            'paketList' => $paketList,
         ]);
     }
 
@@ -63,7 +63,7 @@ class AdminPembayaranController extends Controller
     {
         $validated = $request->validate([
             'id_pelanggan' => 'required|exists:pelanggan,id_pelanggan',
-            'id_paket' => 'required|exists:paket_internet,id_paket', // ✅ VALIDASI PAKET
+            'id_paket' => 'required|exists:paket_internet,id_paket',
             'jenis_pembayaran' => 'required|in:Instalasi,Bulanan',
             'jumlah_bayar' => 'required|numeric|min:0',
             'tanggal_pembayaran' => 'required|date',
@@ -71,19 +71,26 @@ class AdminPembayaranController extends Controller
             'keterangan' => 'nullable|string|max:500',
         ]);
 
-        Pembayaran::create([
+        // Buat pembayaran
+        $pembayaran = Pembayaran::create([
             'id_pelanggan' => $validated['id_pelanggan'],
+            'id_paket' => $validated['id_paket'],
             'jenis_pembayaran' => $validated['jenis_pembayaran'],
             'jumlah_bayar' => $validated['jumlah_bayar'],
             'tanggal_pembayaran' => $validated['tanggal_pembayaran'],
             'metode_bayar' => $validated['metode_bayar'],
             'status_bayar' => 'Lunas',
             'bukti_bayar' => null,
+            'keterangan' => $validated['keterangan'] ?? null,
         ]);
 
+        // ✅ UPDATE PELANGGAN: Jika pembayaran lunas untuk paket, update paket pelanggan
+        $this->updatePaketPelanggan($validated['id_pelanggan'], $validated['id_paket']);
+
         return redirect()->route('admin.pembayaran.index')
-            ->with('success', 'Pembayaran berhasil dicatat!');
+            ->with('success', 'Pembayaran berhasil dicatat dan paket pelanggan diperbarui!');
     }
+
     /**
      * Menampilkan form edit pembayaran
      */
@@ -123,10 +130,15 @@ class AdminPembayaranController extends Controller
 
         $pembayaran->update($validated);
 
+        // ✅ UPDATE PELANGGAN: Jika status berubah menjadi Lunas dan ada id_paket
+        if ($validated['status_bayar'] === 'Lunas' && $validated['id_paket']) {
+            $this->updatePaketPelanggan($validated['id_pelanggan'], $validated['id_paket']);
+        }
+
         return redirect()->route('admin.pembayaran.index')
             ->with('success', 'Data pembayaran berhasil diperbarui!');
     }
-        
+
     /**
      * Verifikasi pembayaran pending
      */
@@ -135,12 +147,17 @@ class AdminPembayaranController extends Controller
         $pembayaran = Pembayaran::findOrFail($id_pembayaran);
         
         $pembayaran->update([
-            'status_bayar' => 'Lunas', // ✅ SESUAIKAN
-            'tanggal_pembayaran' => now(), // Update tanggal saat diverifikasi
+            'status_bayar' => 'Lunas',
+            'tanggal_pembayaran' => now(),
         ]);
 
+        // ✅ UPDATE PELANGGAN: Jika pembayaran diverifikasi dan ada paket
+        if ($pembayaran->id_paket) {
+            $this->updatePaketPelanggan($pembayaran->id_pelanggan, $pembayaran->id_paket);
+        }
+
         return redirect()->back()
-            ->with('success', "Pembayaran berhasil diverifikasi!");
+            ->with('success', "Pembayaran berhasil diverifikasi dan paket pelanggan diperbarui!");
     }
 
     /**
@@ -154,5 +171,20 @@ class AdminPembayaranController extends Controller
 
         return redirect()->route('admin.pembayaran.index')
             ->with('success', "Pembayaran berhasil dihapus!");
+    }
+
+    /**
+     * ✅ METHOD BARU: Update paket pelanggan ketika pembayaran lunas
+     */
+    private function updatePaketPelanggan($id_pelanggan, $id_paket)
+    {
+        $pelanggan = Pelanggan::find($id_pelanggan);
+        
+        if ($pelanggan) {
+            $pelanggan->update([
+                'id_paket' => $id_paket,
+                'status_aktif' => 'Aktif',
+            ]);
+        }
     }
 }

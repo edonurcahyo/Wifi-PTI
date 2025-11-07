@@ -30,7 +30,7 @@ class CustomerDashboardController extends Controller
                 'paket' => $pelanggan->paket ? [
                     'nama_paket' => $pelanggan->paket->nama_paket,
                     'kecepatan' => $pelanggan->paket->kecepatan,
-                    'harga' => $pelanggan->paket->harga,
+                    'harga_bulanan' => $pelanggan->paket->harga_bulanan,
                 ] : null
             ]
         ]);
