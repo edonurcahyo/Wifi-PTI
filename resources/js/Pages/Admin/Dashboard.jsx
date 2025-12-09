@@ -15,8 +15,8 @@ const StatCard = ({ title, value, icon: Icon, color }) => (
 
 const Dashboard = ({ auth }) => {
     const stats = [
-        { title: 'Total Pelanggan', value: '1,245', icon: Users, color: 'text-indigo-500 bg-indigo-500' },
-        { title: 'Pendapatan Bulan Ini', value: 'Rp 250 Jt', icon: DollarSign, color: 'text-green-500 bg-green-500' },
+        { title: 'Total Pelanggan', value: '245', icon: Users, color: 'text-indigo-500 bg-indigo-500' },
+        { title: 'Pendapatan Bulan Ini', value: 'Rp 15 Jt', icon: DollarSign, color: 'text-green-500 bg-green-500' },
         { title: 'Jaringan Aktif', value: '98%', icon: Globe, color: 'text-blue-500 bg-blue-500' },
         { title: 'Log Aktivitas Baru', value: '34', icon: Activity, color: 'text-yellow-500 bg-yellow-500' },
     ];
@@ -39,7 +39,7 @@ const Dashboard = ({ auth }) => {
                         <ul className="space-y-2">
                             <li className="flex justify-between text-gray-700 dark:text-gray-300">
                                 <span>Paket Terlaris:</span>
-                                <span className="font-semibold text-blue-600 dark:text-blue-400">FiberHome 50 Mbps</span>
+                                <span className="font-semibold text-blue-600 dark:text-blue-400">Standard 30 Mbps</span>
                             </li>
                             <li className="flex justify-between text-gray-700 dark:text-gray-300">
                                 <span>Pelanggan Baru Bulan Ini:</span>
@@ -47,7 +47,7 @@ const Dashboard = ({ auth }) => {
                             </li>
                             <li className="flex justify-between text-gray-700 dark:text-gray-300">
                                 <span>Tagihan Belum Lunas:</span>
-                                <span className="font-semibold text-red-600">Rp 12 Jt</span>
+                                <span className="font-semibold text-red-600">Rp 0</span>
                             </li>
                         </ul>
                         <div className="mt-6 flex space-x-3">
@@ -75,7 +75,7 @@ const Dashboard = ({ auth }) => {
                             </li>
                             <li className="flex items-center text-gray-700 dark:text-gray-300">
                                 <span className="w-2 h-2 bg-blue-500 rounded-full mr-3 flex-shrink-0"></span>
-                                Paket FiberHome 30 Mbps diupdate (12:45 PM)
+                                Paket Standard 30 Mbps diupdate (12:45 PM)
                             </li>
                             <li className="flex items-center text-gray-700 dark:text-gray-300">
                                 <span className="w-2 h-2 bg-red-500 rounded-full mr-3 flex-shrink-0"></span>

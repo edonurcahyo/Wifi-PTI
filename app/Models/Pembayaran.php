@@ -84,4 +84,12 @@ class Pembayaran extends Model
     {
         return $this->status_bayar === 'Pending';
     }
+
+    public function getBuktiBayarUrlAttribute()
+    {
+        if (!$this->bukti_bayar) {
+            return null;
+        }
+        return asset('storage/bukti_pembayaran/' . $this->bukti_bayar);
+    }
 }

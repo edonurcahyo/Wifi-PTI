@@ -528,12 +528,27 @@ export default function Home() {
                         <span className="text-sm text-gray-600">{feature}</span>
                       </div>
                     ))}
+                    {/* <Button
+                      className={`w-full mt-6 ${
+                        plan.popular
+                          ? "bg-gradient-to-r from-[#38adc3] to-[#2672c6] hover:opacity-90"
+                          : "bg-[#38adc3] hover:bg-[#2e9bb0]"
+                      } text-white`}
+                    >
+                      Langganan Sekarang
+                    </Button> */}
                     <Button
                       className={`w-full mt-6 ${
                         plan.popular
                           ? "bg-gradient-to-r from-[#38adc3] to-[#2672c6] hover:opacity-90"
                           : "bg-[#38adc3] hover:bg-[#2e9bb0]"
                       } text-white`}
+                      onClick={() => {
+                        // Tampilkan pesan peringatan
+                        alert("Harap login terlebih dahulu untuk berlangganan paket internet.");
+                        // Redirect ke halaman login customer
+                        window.location.href = "/pelanggan/login";
+                      }}
                     >
                       Langganan Sekarang
                     </Button>

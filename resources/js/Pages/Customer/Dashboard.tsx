@@ -41,6 +41,11 @@ import {
   Gift,
   Clock4,
   InfinityIcon,
+  CreditCard,
+  FileText,
+  History,
+  FileImage,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/Components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
@@ -51,6 +56,18 @@ interface Paket {
   nama_paket: string;
   kecepatan: string;
   harga_bulanan: number;
+  id_paket: number;
+}
+
+interface Pembayaran {
+  id_pembayaran: number;
+  jenis_pembayaran: string;
+  tanggal_pembayaran: string;
+  jumlah_bayar: number;
+  metode_bayar: string;
+  status_bayar: string;
+  bukti_bayar: string | null;
+  keterangan: string | null;
 }
 
 interface Pelanggan {
@@ -60,17 +77,26 @@ interface Pelanggan {
   no_hp: string;
   alamat: string;
   paket?: Paket;
-  status_aktif: boolean;
+  status_aktif: string; // PERUBAHAN: dari boolean ke string
+  pembayaran_terakhir: Pembayaran[];
+}
+
+interface PaketList {
+  id_paket: number;
+  nama_paket: string;
+  kecepatan: string;
+  harga_bulanan: number;
 }
 
 interface CustomerDashboardProps extends PageProps {
   pelanggan: Pelanggan;
+  paketList: PaketList[];
 }
 
 export default function CustomerDashboard() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const { pelanggan } = usePage<CustomerDashboardProps>().props;
+  const { pelanggan, paketList } = usePage<CustomerDashboardProps>().props;
 
   const fadeInUp = {
     hidden: { opacity: 0, y: 60 },
@@ -106,9 +132,24 @@ export default function CustomerDashboard() {
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
-  // Data paket internet
-  const paketInternet = [
+  // PERUBAHAN: Cek status aktif
+  const isAktif = pelanggan.status_aktif === 'Aktif';
+
+  // Data paket internet (jika paketList ada, gunakan dari server)
+  const paketInternet = paketList && paketList.length > 0 ? 
+    paketList.map(paket => ({
+      id: paket.id_paket,
+      nama: paket.nama_paket,
+      kecepatan: paket.kecepatan,
+      harga: paket.harga_bulanan,
+      fitur: ["Unlimited Quota", "Akses 24/7", "Support Teknis", "Jaringan Stabil"],
+      populer: paket.nama_paket === "Standard", // Contoh: Standard jadi populer
+      warna: paket.nama_paket === "Basic" ? "from-blue-500 to-cyan-500" : 
+             paket.nama_paket === "Standard" ? "from-purple-500 to-pink-500" : 
+             "from-orange-500 to-red-500",
+    })) : [
     {
+      id: 1,
       nama: "Basic",
       kecepatan: "20 Mbps",
       harga: 150000,
@@ -117,6 +158,7 @@ export default function CustomerDashboard() {
       warna: "from-blue-500 to-cyan-500",
     },
     {
+      id: 2,
       nama: "Standard",
       kecepatan: "30 Mbps",
       harga: 200000,
@@ -125,6 +167,7 @@ export default function CustomerDashboard() {
       warna: "from-purple-500 to-pink-500",
     },
     {
+      id: 3,
       nama: "Premium",
       kecepatan: "50 Mbps",
       harga: 250000,
@@ -190,6 +233,20 @@ export default function CustomerDashboard() {
     },
   ];
 
+  // Format tanggal
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  // Cek apakah ada pembayaran pending tanpa bukti
+  const pendingPembayaran = pelanggan.pembayaran_terakhir?.find(
+    p => p.status_bayar === 'Pending' && !p.bukti_bayar
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       {/* Header */}
@@ -207,6 +264,9 @@ export default function CustomerDashboard() {
             </a>
             <a href="#paket" className="text-sm font-medium hover:text-[#38adc3] transition-colors">
               Paket Saya
+            </a>
+            <a href="#pembayaran" className="text-sm font-medium hover:text-[#38adc3] transition-colors">
+              Pembayaran
             </a>
             <a href="#pilihan-paket" className="text-sm font-medium hover:text-[#38adc3] transition-colors">
               Pilihan Paket
@@ -250,6 +310,13 @@ export default function CustomerDashboard() {
                   >
                     <User className="h-4 w-4" />
                     Profil Saya
+                  </Link>
+                  <Link
+                    href={route('customer.payment.history')}
+                    className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100 transition-colors"
+                  >
+                    <History className="h-4 w-4" />
+                    Riwayat Pembayaran
                   </Link>
                   <Link
                     href="/pelanggan/logout"
@@ -300,6 +367,13 @@ export default function CustomerDashboard() {
                 Paket Saya
               </a>
               <a
+                href="#pembayaran"
+                className="text-sm font-medium hover:text-[#38adc3] transition-colors"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Pembayaran
+              </a>
+              <a
                 href="#pilihan-paket"
                 className="text-sm font-medium hover:text-[#38adc3] transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
@@ -326,6 +400,13 @@ export default function CustomerDashboard() {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Profil Saya
+              </Link>
+              <Link
+                href={route('customer.payment.history')}
+                className="text-sm font-medium hover:text-[#38adc3] transition-colors"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Riwayat Pembayaran
               </Link>
             </nav>
           </motion.div>
@@ -355,11 +436,43 @@ export default function CustomerDashboard() {
             >
               Kelola paket internet dan pembayaran Anda dengan mudah melalui dashboard ASTINet.
             </motion.p>
+            
+            {/* Notifikasi pembayaran pending */}
+            {pendingPembayaran && (
+              <motion.div 
+                variants={fadeInUp}
+                className="mb-6 max-w-2xl mx-auto"
+              >
+                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <AlertCircle className="h-5 w-5 text-yellow-600" />
+                    <div>
+                      <p className="font-semibold text-yellow-800">Pembayaran Menunggu Verifikasi</p>
+                      <p className="text-sm text-yellow-700">Silakan upload bukti pembayaran untuk tagihan Anda</p>
+                    </div>
+                  </div>
+                  <Link
+                    href={route('customer.payment.upload', pendingPembayaran.id_pembayaran)}
+                    className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                  >
+                    Upload Bukti
+                  </Link>
+                </div>
+              </motion.div>
+            )}
+
             <motion.div variants={fadeInUp} className="flex gap-4 justify-center flex-wrap">
               <Button size="lg" className="bg-[#38adc3] hover:bg-[#2e9bb0] text-white px-8" onClick={handleWhatsApp}>
                 Butuh Bantuan?
                 <MessageCircle className="ml-2 h-5 w-5" />
               </Button>
+              <Link
+                href={route('customer.payment.create')}
+                className="inline-flex items-center justify-center rounded-lg text-lg font-semibold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white h-12 px-8 py-3 shadow-lg hover:shadow-xl"
+              >
+                <CreditCard className="mr-2 h-5 w-5" />
+                Bayar Tagihan
+              </Link>
             </motion.div>
           </motion.div>
         </div>
@@ -439,12 +552,13 @@ export default function CustomerDashboard() {
                     {pelanggan.paket?.kecepatan || "0 Mbps"}
                   </p>
                   
+                  {/* PERUBAHAN: Status aktif dari string */}
                   <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium mt-4 ${
-                    pelanggan.status_aktif 
+                    isAktif 
                       ? 'bg-green-500 text-white' 
                       : 'bg-red-500 text-white'
                   }`}>
-                    {pelanggan.status_aktif ? '🟢 Aktif' : '🔴 Tidak Aktif'}
+                    {isAktif ? '🟢 Aktif' : '🔴 Tidak Aktif'}
                   </div>
                 </CardHeader>
               <CardContent className="space-y-6 p-8">
@@ -480,9 +594,197 @@ export default function CustomerDashboard() {
                     Langganan Sekarang
                   </Button>
                 )}
+
+                {pelanggan.paket && (
+                  <div className="mt-6 flex gap-3">
+                    <Link
+                      href={route('customer.payment.create')}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg text-center font-medium transition-colors"
+                    >
+                      Bayar Tagihan
+                    </Link>
+                    <Button
+                      variant="outline"
+                      className="flex-1 border-[#38adc3] text-[#38adc3] hover:bg-[#38adc3] hover:text-white"
+                      onClick={handleWhatsApp}
+                    >
+                      Upgrade Paket
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
+        </div>
+      </section>
+
+      {/* Pembayaran & Riwayat Section */}
+      <section id="pembayaran" className="py-20 bg-white">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={stagger}
+            className="text-center mb-12"
+          >
+            <motion.h2 variants={fadeInUp} className="text-4xl font-bold mb-4">
+              Pembayaran & Tagihan
+            </motion.h2>
+            <motion.p variants={fadeInUp} className="text-gray-600 max-w-2xl mx-auto">
+              Kelola pembayaran dan upload bukti transfer Anda
+            </motion.p>
+          </motion.div>
+
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={stagger}
+            className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto"
+          >
+            {/* Button Buat Pembayaran Baru */}
+            <motion.div variants={fadeInUp}>
+              <Card className="h-full border-2 border-blue-200 hover:border-blue-500 transition-all duration-300 hover:shadow-xl">
+                <CardContent className="p-6 flex flex-col items-center justify-center h-full text-center">
+                  <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center mb-4">
+                    <CreditCard className="h-7 w-7 text-blue-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">Buat Pembayaran Baru</h3>
+                  <p className="text-gray-600 text-sm mb-4">Bayar tagihan bulanan atau instalasi</p>
+                  <Link
+                    href={route('customer.payment.create')}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+                  >
+                    Bayar Sekarang
+                  </Link>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Button Upload Bukti */}
+            <motion.div variants={fadeInUp}>
+              <Card className="h-full border-2 border-green-200 hover:border-green-500 transition-all duration-300 hover:shadow-xl">
+                <CardContent className="p-6 flex flex-col items-center justify-center h-full text-center">
+                  <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mb-4">
+                    <Upload className="h-7 w-7 text-green-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">Upload Bukti Bayar</h3>
+                  <p className="text-gray-600 text-sm mb-4">Upload bukti transfer untuk verifikasi</p>
+                  <Link
+                    href={route('customer.payment.history')}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+                  >
+                    Lihat Tagihan
+                  </Link>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Button Riwayat Pembayaran */}
+            <motion.div variants={fadeInUp}>
+              <Card className="h-full border-2 border-purple-200 hover:border-purple-500 transition-all duration-300 hover:shadow-xl">
+                <CardContent className="p-6 flex flex-col items-center justify-center h-full text-center">
+                  <div className="w-14 h-14 rounded-full bg-purple-100 flex items-center justify-center mb-4">
+                    <History className="h-7 w-7 text-purple-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">Riwayat Pembayaran</h3>
+                  <p className="text-gray-600 text-sm mb-4">Lihat history pembayaran Anda</p>
+                  <Link
+                    href={route('customer.payment.history')}
+                    className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+                  >
+                    Lihat Riwayat
+                  </Link>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </motion.div>
+
+          {/* Tabel Riwayat Pembayaran Terakhir */}
+          {pelanggan.pembayaran_terakhir && pelanggan.pembayaran_terakhir.length > 0 && (
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeInUp}
+              className="mt-12 max-w-4xl mx-auto"
+            >
+              <h3 className="text-xl font-bold mb-4">Pembayaran Terakhir</h3>
+              <div className="bg-white rounded-xl border overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanggal</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jenis</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jumlah</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {pelanggan.pembayaran_terakhir.map((pembayaran) => (
+                        <tr key={pembayaran.id_pembayaran} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            {formatDate(pembayaran.tanggal_pembayaran)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            {pembayaran.jenis_pembayaran}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold">
+                            {formatRupiah(pembayaran.jumlah_bayar)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 py-1 text-xs rounded-full ${
+                              pembayaran.status_bayar === 'Lunas' 
+                                ? 'bg-green-100 text-green-800'
+                                : pembayaran.status_bayar === 'Pending'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}>
+                              {pembayaran.status_bayar}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            {pembayaran.status_bayar === 'Pending' && !pembayaran.bukti_bayar && (
+                              <Link
+                                href={route('customer.payment.upload', pembayaran.id_pembayaran)}
+                                className="text-blue-600 hover:text-blue-800 font-medium"
+                              >
+                                Upload Bukti
+                              </Link>
+                            )}
+                            {pembayaran.bukti_bayar && (
+                              <a
+                                href={`/storage/bukti_pembayaran/${pembayaran.bukti_bayar}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-green-600 hover:text-green-800 font-medium"
+                              >
+                                Lihat Bukti
+                              </a>
+                            )}
+                            {pembayaran.status_bayar === 'Lunas' && !pembayaran.bukti_bayar && (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div className="mt-4 text-center">
+                <Link
+                  href={route('customer.payment.history')}
+                  className="text-[#38adc3] hover:text-[#2e9bb0] font-medium"
+                >
+                  Lihat Semua Riwayat Pembayaran →
+                </Link>
+              </div>
+            </motion.div>
+          )}
         </div>
       </section>
 

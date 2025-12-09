@@ -15,18 +15,73 @@ class AdminPembayaranController extends Controller
     /**
      * Menampilkan daftar semua pembayaran
      */
-    public function index()
+    public function index(Request $request)
     {
-        $pembayaran = Pembayaran::with(['pelanggan', 'pelanggan.paket'])
-            ->orderBy('tanggal_pembayaran', 'desc')
-            ->paginate(15);
-
-        // Hitung statistik - SESUAIKAN DENGAN KOLOM YANG ADA
-        $totalPending = Pembayaran::where('status_bayar', 'Pending')->count();
-        $totalPaid = Pembayaran::where('status_bayar', 'Lunas')->count();
-        $totalFailed = Pembayaran::where('status_bayar', 'Belum Bayar')->count();
-        $totalAmount = Pembayaran::where('status_bayar', 'Lunas')->sum('jumlah_bayar');
-
+        // Query dasar dengan relasi
+        $query = Pembayaran::with(['pelanggan', 'pelanggan.paket'])
+            ->orderBy('tanggal_pembayaran', 'desc');
+        
+        // Filter berdasarkan bulan dan tahun
+        if ($request->has('month') && $request->has('year')) {
+            $month = $request->month;
+            $year = $request->year;
+            
+            $query->whereMonth('tanggal_pembayaran', $month)
+                  ->whereYear('tanggal_pembayaran', $year);
+        } elseif ($request->has('year')) {
+            $query->whereYear('tanggal_pembayaran', $request->year);
+        } elseif ($request->has('month')) {
+            $query->whereMonth('tanggal_pembayaran', $request->month)
+                  ->whereYear('tanggal_pembayaran', date('Y'));
+        }
+        
+        // Filter berdasarkan status
+        if ($request->has('status') && $request->status != 'all') {
+            $query->where('status_bayar', $request->status);
+        }
+        
+        // Filter berdasarkan pencarian
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->whereHas('pelanggan', function ($q) use ($search) {
+                $q->where('nama_pelanggan', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+        
+        $pembayaran = $query->paginate(15);
+        
+        // Hitung statistik - dengan filter yang sama
+        $statsQuery = Pembayaran::query();
+        
+        // Terapkan filter yang sama untuk statistik
+        if ($request->has('month') && $request->has('year')) {
+            $statsQuery->whereMonth('tanggal_pembayaran', $request->month)
+                      ->whereYear('tanggal_pembayaran', $request->year);
+        } elseif ($request->has('year')) {
+            $statsQuery->whereYear('tanggal_pembayaran', $request->year);
+        } elseif ($request->has('month')) {
+            $statsQuery->whereMonth('tanggal_pembayaran', $request->month)
+                      ->whereYear('tanggal_pembayaran', date('Y'));
+        }
+        
+        if ($request->has('status') && $request->status != 'all') {
+            $statsQuery->where('status_bayar', $request->status);
+        }
+        
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $statsQuery->whereHas('pelanggan', function ($q) use ($search) {
+                $q->where('nama_pelanggan', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+        
+        $totalPending = (clone $statsQuery)->where('status_bayar', 'Pending')->count();
+        $totalPaid = (clone $statsQuery)->where('status_bayar', 'Lunas')->count();
+        $totalFailed = (clone $statsQuery)->where('status_bayar', 'Belum Bayar')->count();
+        $totalAmount = (clone $statsQuery)->where('status_bayar', 'Lunas')->sum('jumlah_bayar');
+        
         return Inertia::render('Admin/Pembayaran/Index', [
             'pembayaran' => $pembayaran,
             'stats' => [
@@ -34,6 +89,12 @@ class AdminPembayaranController extends Controller
                 'totalPaid' => $totalPaid,
                 'totalFailed' => $totalFailed,
                 'totalAmount' => $totalAmount,
+            ],
+            'filters' => [
+                'search' => $request->search ?? '',
+                'status' => $request->status ?? 'all',
+                'month' => $request->month ?? date('m'),
+                'year' => $request->year ?? date('Y'),
             ],
             'success' => session('success'),
         ]);

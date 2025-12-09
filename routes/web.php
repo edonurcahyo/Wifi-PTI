@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\PaketInternetController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\Customer\CustomerDashboardController;
 use App\Http\Controllers\Customer\CustomerProfileController;
+use App\Http\Controllers\Customer\CustomerPaymentController;
 use App\Http\Controllers\Admin\AdminPelangganController;
 use App\Http\Controllers\Admin\AdminPembayaranController;
 use App\Http\Controllers\Admin\AdminSettingsController;
@@ -91,5 +92,13 @@ Route::prefix('pelanggan')->name('customer.')->group(function () {
         Route::put('profile', [CustomerProfileController::class, 'update'])->name('profile.update');
         Route::put('profile/password', [CustomerProfileController::class, 'updatePassword'])->name('profile.password');
         Route::delete('profile', [CustomerProfileController::class, 'destroy'])->name('profile.destroy');
+    });
+
+    Route::prefix('pembayaran')->name('payment.')->group(function () {
+        Route::get('buat', [CustomerPaymentController::class, 'create'])->name('create');
+        Route::post('buat', [CustomerPaymentController::class, 'store'])->name('store');
+        Route::get('{id_pembayaran}/upload', [CustomerPaymentController::class, 'showUploadForm'])->name('upload');
+        Route::post('{id_pembayaran}/upload', [CustomerPaymentController::class, 'uploadProof'])->name('upload.proof');
+        Route::get('riwayat', [CustomerPaymentController::class, 'history'])->name('history');
     });
 });

@@ -1,12 +1,25 @@
 import React from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import AdminLayout from '../../Auth/Layouts/AdminLayouts';
-import { PlusCircle, Edit, Trash2, Search, Filter, Download, CheckCircle, XCircle, Clock, DollarSign, Receipt } from 'lucide-react';
-import { useState } from 'react';
+import { PlusCircle, Edit, Trash2, Search, Filter, Download, CheckCircle, XCircle, Clock, DollarSign, Receipt, Calendar } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 const Index = ({ auth, pembayaran, stats, success }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [monthFilter, setMonthFilter] = useState('');
+    const [yearFilter, setYearFilter] = useState('');
+    
+    // Inisialisasi bulan dan tahun saat ini
+    useEffect(() => {
+        const today = new Date();
+        if (!monthFilter) {
+            setMonthFilter((today.getMonth() + 1).toString().padStart(2, '0'));
+        }
+        if (!yearFilter) {
+            setYearFilter(today.getFullYear().toString());
+        }
+    }, []);
     
     const formatRupiah = (angka) => {
         if (!angka) return 'Rp 0';
@@ -24,6 +37,29 @@ const Index = ({ auth, pembayaran, stats, success }) => {
             year: 'numeric'
         });
     };
+
+    // Generate array bulan untuk dropdown
+    const months = [
+        { value: '01', label: 'Januari' },
+        { value: '02', label: 'Februari' },
+        { value: '03', label: 'Maret' },
+        { value: '04', label: 'April' },
+        { value: '05', label: 'Mei' },
+        { value: '06', label: 'Juni' },
+        { value: '07', label: 'Juli' },
+        { value: '08', label: 'Agustus' },
+        { value: '09', label: 'September' },
+        { value: '10', label: 'Oktober' },
+        { value: '11', label: 'November' },
+        { value: '12', label: 'Desember' },
+    ];
+
+    // Generate array tahun untuk dropdown (3 tahun ke belakang dan 1 tahun ke depan)
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({ length: 5 }, (_, i) => {
+        const year = currentYear - 2 + i;
+        return { value: year.toString(), label: year.toString() };
+    });
 
     const getStatusBadge = (status) => {
         const statusConfig = {
@@ -86,6 +122,41 @@ const Index = ({ auth, pembayaran, stats, success }) => {
         }
     };
 
+    const handleFilterChange = () => {
+        const params = {};
+        
+        if (searchTerm) params.search = searchTerm;
+        if (statusFilter !== 'all') params.status = statusFilter;
+        if (monthFilter) params.month = monthFilter;
+        if (yearFilter) params.year = yearFilter;
+        
+        router.get(route('admin.pembayaran.index'), params, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        });
+    };
+
+    const handleResetFilter = () => {
+        setSearchTerm('');
+        setStatusFilter('all');
+        setMonthFilter((new Date().getMonth() + 1).toString().padStart(2, '0'));
+        setYearFilter(new Date().getFullYear().toString());
+        
+        router.get(route('admin.pembayaran.index'), {}, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        });
+    };
+
+    // Fungsi untuk mendapatkan nama bulan dari angka
+    const getMonthName = (monthNumber) => {
+        const month = months.find(m => m.value === monthNumber);
+        return month ? month.label : 'Bulan tidak valid';
+    };
+
+    // Filter data secara lokal (opsional, atau gunakan filter dari backend)
     const filteredPembayaran = pembayaran.data?.filter(p => {
         const matchesSearch = 
             p.pelanggan?.nama_pelanggan.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -93,7 +164,16 @@ const Index = ({ auth, pembayaran, stats, success }) => {
         
         const matchesStatus = statusFilter === 'all' || p.status_bayar === statusFilter;
         
-        return matchesSearch && matchesStatus;
+        // Filter berdasarkan bulan dan tahun
+        let matchesDate = true;
+        if (monthFilter && yearFilter) {
+            const paymentDate = new Date(p.tanggal_pembayaran);
+            const paymentMonth = (paymentDate.getMonth() + 1).toString().padStart(2, '0');
+            const paymentYear = paymentDate.getFullYear().toString();
+            matchesDate = paymentMonth === monthFilter && paymentYear === yearFilter;
+        }
+        
+        return matchesSearch && matchesStatus && matchesDate;
     });
 
     return (
@@ -114,15 +194,22 @@ const Index = ({ auth, pembayaran, stats, success }) => {
                         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Kelola Pembayaran</h2>
                         <p className="text-gray-600 dark:text-gray-400 mt-1">
                             Management transaksi pembayaran pelanggan
+                            {monthFilter && yearFilter && (
+                                <span className="ml-2 font-semibold text-blue-600 dark:text-blue-400">
+                                    - Periode: {getMonthName(monthFilter)} {yearFilter}
+                                </span>
+                            )}
                         </p>
                     </div>
-                    <Link
-                        href={route('admin.pembayaran.create')}
-                        className="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-lg font-semibold text-white uppercase tracking-widest hover:bg-blue-700 transition duration-150"
-                    >
-                        <PlusCircle className="w-5 h-5 mr-2" />
-                        Tambah Pembayaran
-                    </Link>
+                    <div className="flex gap-2">
+                        <Link
+                            href={route('admin.pembayaran.create')}
+                            className="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-lg font-semibold text-white uppercase tracking-widest hover:bg-blue-700 transition duration-150"
+                        >
+                            <PlusCircle className="w-5 h-5 mr-2" />
+                            Tambah Pembayaran
+                        </Link>
+                    </div>
                 </div>
 
                 {/* Stats Cards */}
@@ -137,6 +224,11 @@ const Index = ({ auth, pembayaran, stats, success }) => {
                                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
                                     {formatRupiah(stats?.totalAmount || 0)}
                                 </p>
+                                {monthFilter && yearFilter && (
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        {getMonthName(monthFilter)} {yearFilter}
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -180,8 +272,8 @@ const Index = ({ auth, pembayaran, stats, success }) => {
 
                 {/* Search and Filter */}
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                    <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="flex-1 relative">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="relative">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                             <input
                                 type="text"
@@ -191,24 +283,85 @@ const Index = ({ auth, pembayaran, stats, success }) => {
                                 className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                             />
                         </div>
-                        <div className="flex gap-2">
+                        
+                        <div>
                             <select
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
-                                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                             >
                                 <option value="all">Semua Status</option>
                                 <option value="Pending">Pending</option>
                                 <option value="Lunas">Lunas</option>
                                 <option value="Belum Bayar">Belum Bayar</option>
                             </select>
-                            <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        </div>
+                        
+                        <div className="flex gap-2">
+                            <div className="flex-1 relative">
+                                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                                <select
+                                    value={monthFilter}
+                                    onChange={(e) => setMonthFilter(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                >
+                                    {months.map((month) => (
+                                        <option key={month.value} value={month.value}>
+                                            {month.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            
+                            <div className="flex-1">
+                                <select
+                                    value={yearFilter}
+                                    onChange={(e) => setYearFilter(e.target.value)}
+                                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                >
+                                    {years.map((year) => (
+                                        <option key={year.value} value={year.value}>
+                                            {year.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={handleFilterChange}
+                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                            >
                                 <Filter className="h-4 w-4" />
-                                Filter
+                                Terapkan Filter
+                            </button>
+                            <button 
+                                onClick={handleResetFilter}
+                                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                title="Reset Filter"
+                            >
+                                Reset
                             </button>
                         </div>
                     </div>
                 </div>
+
+                {/* Info Filter */}
+                {(searchTerm || statusFilter !== 'all' || monthFilter || yearFilter) && (
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                        <p className="text-sm text-blue-800 dark:text-blue-300">
+                            Menampilkan data dengan filter:
+                            {searchTerm && <span className="font-semibold ml-1">Pencarian: "{searchTerm}"</span>}
+                            {statusFilter !== 'all' && <span className="font-semibold ml-2">Status: {statusFilter}</span>}
+                            {monthFilter && yearFilter && (
+                                <span className="font-semibold ml-2">
+                                    Periode: {getMonthName(monthFilter)} {yearFilter}
+                                </span>
+                            )}
+                        </p>
+                    </div>
+                )}
 
                 {/* Table */}
                 <div className="bg-white dark:bg-gray-800 shadow-xl rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
@@ -312,7 +465,7 @@ const Index = ({ auth, pembayaran, stats, success }) => {
                                 ) : (
                                     <tr>
                                         <td colSpan="7" className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                                            {searchTerm || statusFilter !== 'all' 
+                                            {searchTerm || statusFilter !== 'all' || monthFilter || yearFilter 
                                                 ? 'Tidak ada pembayaran yang sesuai dengan filter.' 
                                                 : 'Belum ada data pembayaran.'}
                                         </td>
