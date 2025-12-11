@@ -9,6 +9,7 @@ use App\Models\Pelanggan;
 use App\Models\PaketInternet;
 use Inertia\Inertia;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 class AdminPembayaranController extends Controller
 {
@@ -50,6 +51,12 @@ class AdminPembayaranController extends Controller
         }
         
         $pembayaran = $query->paginate(15);
+        
+        // TAMBAHKAN: Append bukti_bayar_url ke setiap item
+        $pembayaran->getCollection()->transform(function ($item) {
+            $item->bukti_bayar_url = $item->getBuktiBayarUrlAttribute();
+            return $item;
+        });
         
         // Hitung statistik - dengan filter yang sama
         $statsQuery = Pembayaran::query();
@@ -145,7 +152,7 @@ class AdminPembayaranController extends Controller
             'keterangan' => $validated['keterangan'] ?? null,
         ]);
 
-        // ✅ UPDATE PELANGGAN: Jika pembayaran lunas untuk paket, update paket pelanggan
+        // UPDATE PELANGGAN: Jika pembayaran lunas untuk paket, update paket pelanggan
         $this->updatePaketPelanggan($validated['id_pelanggan'], $validated['id_paket']);
 
         return redirect()->route('admin.pembayaran.index')
@@ -163,6 +170,9 @@ class AdminPembayaranController extends Controller
             ->get();
 
         $paketList = PaketInternet::orderBy('harga_bulanan')->get();
+
+        // TAMBAHKAN: Append bukti_bayar_url
+        $pembayaran->bukti_bayar_url = $pembayaran->getBuktiBayarUrlAttribute();
 
         return Inertia::render('Admin/Pembayaran/Edit', [
             'pembayaran' => $pembayaran,
@@ -191,7 +201,7 @@ class AdminPembayaranController extends Controller
 
         $pembayaran->update($validated);
 
-        // ✅ UPDATE PELANGGAN: Jika status berubah menjadi Lunas dan ada id_paket
+        // UPDATE PELANGGAN: Jika status berubah menjadi Lunas dan ada id_paket
         if ($validated['status_bayar'] === 'Lunas' && $validated['id_paket']) {
             $this->updatePaketPelanggan($validated['id_pelanggan'], $validated['id_paket']);
         }
@@ -212,7 +222,7 @@ class AdminPembayaranController extends Controller
             'tanggal_pembayaran' => now(),
         ]);
 
-        // ✅ UPDATE PELANGGAN: Jika pembayaran diverifikasi dan ada paket
+        // UPDATE PELANGGAN: Jika pembayaran diverifikasi dan ada paket
         if ($pembayaran->id_paket) {
             $this->updatePaketPelanggan($pembayaran->id_pelanggan, $pembayaran->id_paket);
         }
@@ -228,6 +238,14 @@ class AdminPembayaranController extends Controller
     {
         $pembayaran = Pembayaran::findOrFail($id_pembayaran);
         
+        // Hapus file bukti bayar jika ada
+        if ($pembayaran->bukti_bayar) {
+            $path = 'public/bukti_pembayaran/' . $pembayaran->bukti_bayar;
+            if (Storage::exists($path)) {
+                Storage::delete($path);
+            }
+        }
+        
         $pembayaran->delete();
 
         return redirect()->route('admin.pembayaran.index')
@@ -235,7 +253,7 @@ class AdminPembayaranController extends Controller
     }
 
     /**
-     * ✅ METHOD BARU: Update paket pelanggan ketika pembayaran lunas
+     * METHOD BARU: Update paket pelanggan ketika pembayaran lunas
      */
     private function updatePaketPelanggan($id_pelanggan, $id_paket)
     {
@@ -247,5 +265,45 @@ class AdminPembayaranController extends Controller
                 'status_aktif' => 'Aktif',
             ]);
         }
+    }
+
+    /**
+     * METHOD BARU: View/Download bukti pembayaran
+     */
+    public function viewBukti($id_pembayaran)
+    {
+        $pembayaran = Pembayaran::findOrFail($id_pembayaran);
+        
+        if (!$pembayaran->bukti_bayar) {
+            abort(404, 'Bukti pembayaran tidak ditemukan');
+        }
+        
+        $path = 'public/bukti_pembayaran/' . $pembayaran->bukti_bayar;
+        
+        if (!Storage::exists($path)) {
+            abort(404, 'File bukti pembayaran tidak ditemukan di storage');
+        }
+        
+        return response()->file(storage_path('app/' . $path));
+    }
+
+    /**
+     * METHOD BARU: Download bukti pembayaran
+     */
+    public function downloadBukti($id_pembayaran)
+    {
+        $pembayaran = Pembayaran::findOrFail($id_pembayaran);
+        
+        if (!$pembayaran->bukti_bayar) {
+            abort(404, 'Bukti pembayaran tidak ditemukan');
+        }
+        
+        $path = 'public/bukti_pembayaran/' . $pembayaran->bukti_bayar;
+        
+        if (!Storage::exists($path)) {
+            abort(404, 'File bukti pembayaran tidak ditemukan di storage');
+        }
+        
+        return Storage::download($path, 'bukti_pembayaran_' . $pembayaran->id_pembayaran . '.' . pathinfo($pembayaran->bukti_bayar, PATHINFO_EXTENSION));
     }
 }

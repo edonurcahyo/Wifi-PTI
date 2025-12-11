@@ -2,6 +2,9 @@
 import React from 'react';
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { useForm } from '@inertiajs/react';
+import Swal from "sweetalert2";
+
 import {
   Wifi,
   Zap,
@@ -44,7 +47,7 @@ import {
   CreditCard,
   FileText,
   History,
-  FileImage,
+  FileImage, // PERUBAHAN: Ditambahkan
   AlertCircle,
 } from "lucide-react";
 import { Button } from "@/Components/ui/button";
@@ -77,7 +80,7 @@ interface Pelanggan {
   no_hp: string;
   alamat: string;
   paket?: Paket;
-  status_aktif: string; // PERUBAHAN: dari boolean ke string
+  status_aktif: string;
   pembayaran_terakhir: Pembayaran[];
 }
 
@@ -96,6 +99,14 @@ interface CustomerDashboardProps extends PageProps {
 export default function CustomerDashboard() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  // PERUBAHAN: Tambah state untuk modal upload
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<{
+    id: number;
+    type: string;
+    amount: number;
+  } | null>(null);
+
   const { pelanggan, paketList } = usePage<CustomerDashboardProps>().props;
 
   const fadeInUp = {
@@ -132,10 +143,340 @@ export default function CustomerDashboard() {
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
-  // PERUBAHAN: Cek status aktif
+  // PERUBAHAN: Fungsi untuk buka modal upload
+  const openUploadModal = (paymentId: number, paymentType: string, amount: number) => {
+    console.log('Opening upload modal for payment:', { paymentId, paymentType, amount });
+    setSelectedPayment({ id: paymentId, type: paymentType, amount });
+    setUploadModalOpen(true);
+  };
+
   const isAktif = pelanggan.status_aktif === 'Aktif';
 
-  // Data paket internet (jika paketList ada, gunakan dari server)
+  const UploadPaymentModal = () => {
+    const [preview, setPreview] = useState<string | null>(null);
+    const [notes, setNotes] = useState("");
+
+    const { post, processing, errors, setData, data } = useForm({
+      bukti_bayar: null as File | null,
+      keterangan: "",
+    });
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const selectedFile = e.target.files?.[0];
+      if (selectedFile) {
+        setData("bukti_bayar", selectedFile);
+
+        const reader = new FileReader();
+        reader.onloadend = () => setPreview(reader.result as string);
+        reader.readAsDataURL(selectedFile);
+      }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+
+      // VALIDASI: Tidak ada file
+      if (!data.bukti_bayar || !selectedPayment) {
+        Swal.fire({
+          icon: "warning",
+          title: "File belum dipilih",
+          text: "Silakan upload bukti pembayaran terlebih dahulu.",
+          confirmButtonColor: "#38adc3",
+        });
+        return;
+      }
+
+      // Set keterangan sebelum submit
+      setData("keterangan", notes);
+
+      // KIRIM POST INERTIA
+      post(route("customer.payment.upload.proof", selectedPayment.id), {
+        forceFormData: true,
+        preserveScroll: true,
+
+        // SUCCESS
+        onSuccess: () => {
+          Swal.fire({
+            icon: "success",
+            title: "Upload Berhasil!",
+            text: "Bukti pembayaran berhasil diupload. Verifikasi 1–3 jam.",
+            confirmButtonColor: "#38adc3",
+          }).then(() => {
+            handleClose();
+            window.location.reload();
+          });
+        },
+
+        // ERROR
+        onError: (errors) => {
+          console.error("Upload errors:", errors);
+
+          let errorMsg = "Terjadi kesalahan saat mengupload bukti pembayaran";
+          if (errors.bukti_bayar) errorMsg = errors.bukti_bayar;
+          else if (errors.message) errorMsg = errors.message;
+
+          Swal.fire({
+            icon: "error",
+            title: "Upload Gagal",
+            text: errorMsg,
+            confirmButtonColor: "#d33",
+          });
+        },
+      });
+    };
+
+    const handleClose = () => {
+      setUploadModalOpen(false);
+      setSelectedPayment(null);
+      setPreview(null);
+      setNotes("");
+
+      // RESET FORM DATA
+      setData({
+        bukti_bayar: null,
+        keterangan: "",
+      });
+    };
+
+    if (!uploadModalOpen || !selectedPayment) return null;
+
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+        onClick={handleClose}
+      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[95vh] flex flex-col"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* HEADER */}
+          <div className="bg-gradient-to-r from-[#38adc3] to-[#2672c6] p-6 text-white flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold">Upload Bukti Pembayaran</h2>
+                <p className="text-blue-100 mt-1">Lengkapi pembayaran Anda</p>
+              </div>
+              <button
+                onClick={handleClose}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                disabled={processing}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* CONTENT */}
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
+            <div className="p-6 space-y-6">
+              {/* PAYMENT INFO */}
+              <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Jenis Pembayaran</p>
+                    <p className="font-semibold">{selectedPayment.type}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Jumlah</p>
+                    <p className="font-bold text-lg text-blue-600">
+                      {formatRupiah(selectedPayment.amount)}
+                    </p>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-sm text-gray-600">ID Pembayaran</p>
+                    <p className="font-mono text-gray-800">
+                      #{selectedPayment.id.toString().padStart(6, "0")}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* FILE UPLOAD */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Bukti Pembayaran (JPG, PNG, GIF - Max 2MB)
+                  <span className="text-red-500 ml-1">*</span>
+                </label>
+
+                {errors.bukti_bayar && (
+                  <p className="text-red-500 text-sm mb-2">
+                    {errors.bukti_bayar}
+                  </p>
+                )}
+
+                <div
+                  className={`border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer ${
+                    data.bukti_bayar
+                      ? "border-green-500 bg-green-50"
+                      : errors.bukti_bayar
+                      ? "border-red-300 bg-red-50"
+                      : "border-gray-300 hover:border-[#38adc3] hover:bg-blue-50"
+                  } ${processing ? "opacity-50 cursor-not-allowed" : ""}`}
+                  onClick={() =>
+                    !processing &&
+                    document.getElementById("file-input")?.click()
+                  }
+                >
+                  <input
+                    id="file-input"
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.gif"
+                    className="hidden"
+                    onChange={handleFileChange}
+                    disabled={processing}
+                  />
+
+                  {preview ? (
+                    <div className="space-y-4">
+                      <div className="relative mx-auto max-h-48 rounded-lg overflow-hidden">
+                        <img
+                          src={preview}
+                          alt="Preview"
+                          className="w-full h-48 object-contain"
+                        />
+                      </div>
+
+                      {!processing && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setData("bukti_bayar", null);
+                            setPreview(null);
+                          }}
+                          className="text-red-600 hover:text-red-800 text-sm font-medium"
+                        >
+                          Hapus File
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-100 flex items-center justify-center">
+                        <Upload className="h-8 w-8 text-blue-600" />
+                      </div>
+                      <p className="text-gray-700 font-medium mb-2">
+                        Klik untuk upload file
+                      </p>
+                      <p className="text-gray-500 text-sm">
+                        Format: JPG, PNG, GIF (max 2MB)
+                      </p>
+                      <p className="text-gray-500 text-xs mt-2">
+                        Minimal 300x300px, maksimal 2000x2000px
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                {data.bukti_bayar && (
+                  <p className="mt-2 text-sm text-gray-600">
+                    File terpilih:
+                    <span className="font-medium ml-1">
+                      {data.bukti_bayar.name}
+                    </span>
+                    <span className="ml-2 text-gray-500">
+                      ({(data.bukti_bayar.size / 1024).toFixed(2)} KB)
+                    </span>
+                  </p>
+                )}
+              </div>
+
+              {/* CATATAN */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Catatan (Opsional)
+                </label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Contoh: Transfer via BCA tanggal 15 Januari..."
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#38adc3] focus:border-transparent resize-none disabled:opacity-50"
+                  rows={3}
+                  disabled={processing}
+                />
+
+                {errors.keterangan && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.keterangan}
+                  </p>
+                )}
+              </div>
+
+              {/* INSTRUKSI */}
+              <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-amber-600 mt-1" />
+                  <div>
+                    <h4 className="font-medium text-amber-800 mb-1">
+                      Instruksi Upload
+                    </h4>
+                    <ul className="text-sm text-amber-700 space-y-1">
+                      <li>• Foto harus jelas (nama, nominal, tanggal)</li>
+                      <li>• Max size 2MB</li>
+                      <li>• Format JPG/PNG/GIF</li>
+                      <li>• Verifikasi 1–3 jam</li>
+                      <li>• Hubungi WA support jika ada masalah</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* BUTTON */}
+            <div className="p-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="flex-1 py-3 px-4 border border-gray-300 rounded-lg font-medium hover:bg-gray-100 transition-colors disabled:opacity-50"
+                  disabled={processing}
+                >
+                  Batal
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={!data.bukti_bayar || processing}
+                  className={`flex-1 py-3 px-4 rounded-lg font-medium text-white transition-all flex items-center justify-center ${
+                    !data.bukti_bayar || processing
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg hover:shadow-xl"
+                  }`}
+                >
+                  {processing ? (
+                    <>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{
+                          duration: 1,
+                          repeat: Infinity,
+                          ease: "linear",
+                        }}
+                        className="h-5 w-5 border-2 border-white border-t-transparent rounded-full mr-2"
+                      />
+                      Mengupload...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-5 w-5" />
+                      Upload & Verifikasi
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </form>
+        </motion.div>
+      </motion.div>
+    );
+  };
+
   const paketInternet = paketList && paketList.length > 0 ? 
     paketList.map(paket => ({
       id: paket.id_paket,
@@ -143,7 +484,7 @@ export default function CustomerDashboard() {
       kecepatan: paket.kecepatan,
       harga: paket.harga_bulanan,
       fitur: ["Unlimited Quota", "Akses 24/7", "Support Teknis", "Jaringan Stabil"],
-      populer: paket.nama_paket === "Standard", // Contoh: Standard jadi populer
+      populer: paket.nama_paket === "Standard",
       warna: paket.nama_paket === "Basic" ? "from-blue-500 to-cyan-500" : 
              paket.nama_paket === "Standard" ? "from-purple-500 to-pink-500" : 
              "from-orange-500 to-red-500",
@@ -177,7 +518,6 @@ export default function CustomerDashboard() {
     },
   ];
 
-  // Data fitur layanan
   const fiturLayanan = [
     {
       icon: <Zap className="h-8 w-8" />,
@@ -205,7 +545,6 @@ export default function CustomerDashboard() {
     },
   ];
 
-  // Data statistik
   const statistik = [
     {
       icon: <Users className="h-6 w-6" />,
@@ -233,7 +572,6 @@ export default function CustomerDashboard() {
     },
   ];
 
-  // Format tanggal
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('id-ID', {
       day: 'numeric',
@@ -242,13 +580,15 @@ export default function CustomerDashboard() {
     });
   };
 
-  // Cek apakah ada pembayaran pending tanpa bukti
   const pendingPembayaran = pelanggan.pembayaran_terakhir?.find(
     p => p.status_bayar === 'Pending' && !p.bukti_bayar
   );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+      {/* PERUBAHAN: Panggil modal upload */}
+      <UploadPaymentModal />
+
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
@@ -279,7 +619,6 @@ export default function CustomerDashboard() {
             </a>
           </nav>
           <div className="flex items-center gap-4">
-            {/* User Profile Menu */}
             <div className="relative">
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
@@ -293,7 +632,6 @@ export default function CustomerDashboard() {
                 </span>
               </button>
 
-              {/* User Dropdown Menu */}
               {userMenuOpen && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
@@ -343,7 +681,6 @@ export default function CustomerDashboard() {
           </div>
         </div>
 
-        {/* Mobile Menu */}
         {mobileMenuOpen && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -437,7 +774,7 @@ export default function CustomerDashboard() {
               Kelola paket internet dan pembayaran Anda dengan mudah melalui dashboard ASTINet.
             </motion.p>
             
-            {/* Notifikasi pembayaran pending */}
+            {/* PERUBAHAN: Ganti Link dengan button */}
             {pendingPembayaran && (
               <motion.div 
                 variants={fadeInUp}
@@ -451,12 +788,16 @@ export default function CustomerDashboard() {
                       <p className="text-sm text-yellow-700">Silakan upload bukti pembayaran untuk tagihan Anda</p>
                     </div>
                   </div>
-                  <Link
-                    href={route('customer.payment.upload', pendingPembayaran.id_pembayaran)}
+                  <button
+                    onClick={() => openUploadModal(
+                      pendingPembayaran.id_pembayaran,
+                      pendingPembayaran.jenis_pembayaran,
+                      pendingPembayaran.jumlah_bayar
+                    )}
                     className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
                   >
                     Upload Bukti
-                  </Link>
+                  </button>
                 </div>
               </motion.div>
             )}
@@ -536,7 +877,6 @@ export default function CustomerDashboard() {
                     {pelanggan.paket?.nama_paket || "Belum Berlangganan"}
                   </CardTitle>
                   
-                  {/* Perbaiki formatting harga */}
                   <div className="mb-2">
                     <span className="text-5xl font-bold">
                       {pelanggan.paket ? (
@@ -552,7 +892,6 @@ export default function CustomerDashboard() {
                     {pelanggan.paket?.kecepatan || "0 Mbps"}
                   </p>
                   
-                  {/* PERUBAHAN: Status aktif dari string */}
                   <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium mt-4 ${
                     isAktif 
                       ? 'bg-green-500 text-white' 
@@ -661,8 +1000,8 @@ export default function CustomerDashboard() {
                 </CardContent>
               </Card>
             </motion.div>
-
-            {/* Button Upload Bukti */}
+            
+            {/* Button Upload Bukti - MINIMAL */}
             <motion.div variants={fadeInUp}>
               <Card className="h-full border-2 border-green-200 hover:border-green-500 transition-all duration-300 hover:shadow-xl">
                 <CardContent className="p-6 flex flex-col items-center justify-center h-full text-center">
@@ -671,12 +1010,19 @@ export default function CustomerDashboard() {
                   </div>
                   <h3 className="text-lg font-semibold mb-2">Upload Bukti Bayar</h3>
                   <p className="text-gray-600 text-sm mb-4">Upload bukti transfer untuk verifikasi</p>
-                  <Link
-                    href={route('customer.payment.history')}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
-                  >
-                    Lihat Tagihan
-                  </Link>
+                  
+                  {pendingPembayaran && (
+                    <button
+                      onClick={() => openUploadModal(
+                        pendingPembayaran.id_pembayaran,
+                        pendingPembayaran.jenis_pembayaran,
+                        pendingPembayaran.jumlah_bayar
+                      )}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+                    >
+                      Upload Bukti
+                    </button>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
@@ -747,13 +1093,18 @@ export default function CustomerDashboard() {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            {/* PERUBAHAN: Ganti Link dengan button */}
                             {pembayaran.status_bayar === 'Pending' && !pembayaran.bukti_bayar && (
-                              <Link
-                                href={route('customer.payment.upload', pembayaran.id_pembayaran)}
+                              <button
+                                onClick={() => openUploadModal(
+                                  pembayaran.id_pembayaran,
+                                  pembayaran.jenis_pembayaran,
+                                  pembayaran.jumlah_bayar
+                                )}
                                 className="text-blue-600 hover:text-blue-800 font-medium"
                               >
                                 Upload Bukti
-                              </Link>
+                              </button>
                             )}
                             {pembayaran.bukti_bayar && (
                               <a

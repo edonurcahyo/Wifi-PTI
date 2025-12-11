@@ -86,14 +86,22 @@ class CustomerPaymentController extends Controller
     /**
      * Upload bukti pembayaran
      */
+    
     public function uploadProof(Request $request, $id_pembayaran)
     {
         $request->validate([
-            'bukti_bayar' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'bukti_bayar' => [
+                'required',
+                'image',
+                'mimes:jpeg,png,jpg,gif',
+                'max:2048',
+                'dimensions:min_width=300,min_height=300,max_width=2000,max_height=2000'
+            ],
         ]);
 
         $pembayaran = Pembayaran::where('id_pembayaran', $id_pembayaran)
             ->where('id_pelanggan', Auth::guard('customer')->id())
+            ->whereIn('status_bayar', ['Pending', 'Belum Bayar']) // Hanya bisa upload jika status tertentu
             ->firstOrFail();
 
         // Hapus bukti lama jika ada

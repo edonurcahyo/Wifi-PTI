@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class Pembayaran extends Model
 {
@@ -24,6 +25,9 @@ class Pembayaran extends Model
         'keterangan', 
     ];
 
+    // TAMBAHKAN: Append accessor ke JSON
+    protected $appends = ['bukti_bayar_url', 'bukti_exists'];
+
     protected $casts = [
         'tanggal_pembayaran' => 'date',
         'jumlah_bayar' => 'decimal:2',
@@ -34,7 +38,7 @@ class Pembayaran extends Model
      */
     public function pelanggan()
     {
-        return $this->belongsTo(Pelanggan::class, 'id_pelanggan');
+        return $this->belongsTo(Pelanggan::class, 'id_pelanggan', 'id_pelanggan');
     }
 
     /**
@@ -42,7 +46,7 @@ class Pembayaran extends Model
      */
     public function paket()
     {
-        return $this->belongsTo(PaketInternet::class, 'id_paket');
+        return $this->belongsTo(PaketInternet::class, 'id_paket', 'id_paket');
     }
 
     /**
@@ -85,11 +89,29 @@ class Pembayaran extends Model
         return $this->status_bayar === 'Pending';
     }
 
+    /**
+     * Accessor untuk URL bukti bayar
+     */
     public function getBuktiBayarUrlAttribute()
     {
         if (!$this->bukti_bayar) {
             return null;
         }
+        
+        // Generate URL lengkap
         return asset('storage/bukti_pembayaran/' . $this->bukti_bayar);
+    }
+
+    /**
+     * Accessor untuk cek apakah file bukti exists
+     */
+    public function getBuktiExistsAttribute()
+    {
+        if (!$this->bukti_bayar) {
+            return false;
+        }
+        
+        $path = 'public/bukti_pembayaran/' . $this->bukti_bayar;
+        return Storage::exists($path);
     }
 }
