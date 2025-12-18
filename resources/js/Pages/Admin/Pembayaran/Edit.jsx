@@ -1,18 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 import AdminLayout from "../../Auth/Layouts/AdminLayouts";
-import { ArrowLeft, Save, User, DollarSign, Calendar, CreditCard, Check } from 'lucide-react';
+import { 
+    ArrowLeft, Save, User, DollarSign, Calendar, 
+    CreditCard, Check, Clock, AlertCircle, CalendarRange
+} from 'lucide-react';
 
-const Edit = ({ auth, pembayaran, pelanggan }) => {
+const Edit = ({ auth, pembayaran, pelanggan, paketList }) => {
     const [selectedPelanggan, setSelectedPelanggan] = useState(null);
+    const [selectedPaket, setSelectedPaket] = useState(null);
+    
+    // Generate pilihan bulan (12 bulan ke depan)
+    const generateMonthOptions = () => {
+        const months = [];
+        const currentDate = new Date();
+        
+        for (let i = -6; i < 6; i++) { // 6 bulan ke belakang, 6 bulan ke depan
+            const date = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, 1);
+            const month = date.getMonth() + 1;
+            const year = date.getFullYear();
+            const monthName = date.toLocaleDateString('id-ID', { month: 'long' });
+            
+            const value = `${year}-${month.toString().padStart(2, '0')}-01`;
+            const label = `${monthName} ${year}`;
+            
+            months.push({ value, label });
+        }
+        
+        return months;
+    };
+
+    const monthOptions = generateMonthOptions();
     
     const { data, setData, put, processing, errors } = useForm({
         id_pelanggan: pembayaran.id_pelanggan || '',
+        id_paket: pembayaran.id_paket || '',
         jenis_pembayaran: pembayaran.jenis_pembayaran || 'Bulanan',
         jumlah_bayar: pembayaran.jumlah_bayar || '',
         tanggal_pembayaran: pembayaran.tanggal_pembayaran ? pembayaran.tanggal_pembayaran.split('T')[0] : new Date().toISOString().split('T')[0],
+        bulan_dibayar: pembayaran.bulan_dibayar || '',
+        periode_awal: pembayaran.periode_awal || '',
+        periode_akhir: pembayaran.periode_akhir || '',
+        tanggal_tempo: pembayaran.tanggal_tempo || '',
         metode_bayar: pembayaran.metode_bayar || 'Transfer',
         status_bayar: pembayaran.status_bayar || 'Pending',
+        keterangan: pembayaran.keterangan || '',
     });
 
     // ✅ INITIALIZE DATA SAAT COMPONENT MOUNT
@@ -21,8 +53,46 @@ const Edit = ({ auth, pembayaran, pelanggan }) => {
         if (pembayaran.id_pelanggan) {
             const pelangganData = pelanggan.find(p => p.id_pelanggan == pembayaran.id_pelanggan);
             setSelectedPelanggan(pelangganData);
+            
+            // Jika ada paket, set selected paket
+            if (pembayaran.id_paket && paketList) {
+                const paketData = paketList.find(p => p.id_paket == pembayaran.id_paket);
+                setSelectedPaket(paketData);
+            }
         }
-    }, [pembayaran, pelanggan]);
+    }, [pembayaran, pelanggan, paketList]);
+
+    // Hitung status tempo
+    const calculateTempoStatus = () => {
+        if (!data.tanggal_tempo || !data.tanggal_pembayaran) {
+            return null;
+        }
+        
+        const tempoDate = new Date(data.tanggal_tempo);
+        const bayarDate = new Date(data.tanggal_pembayaran);
+        const diffTime = bayarDate - tempoDate;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays <= 0) {
+            return {
+                status: 'tepat_waktu',
+                message: `Dibayar ${Math.abs(diffDays)} hari sebelum tempo`,
+                color: 'text-green-600',
+                bgColor: 'bg-green-50',
+                borderColor: 'border-green-200'
+            };
+        } else {
+            return {
+                status: 'terlambat',
+                message: `Terlambat ${diffDays} hari dari tempo`,
+                color: 'text-red-600',
+                bgColor: 'bg-red-50',
+                borderColor: 'border-red-200'
+            };
+        }
+    };
+
+    const tempoInfo = calculateTempoStatus();
 
     // ✅ HANDLER UNTUK INPUT CHANGE
     const handleInputChange = (field, value) => {
@@ -33,6 +103,42 @@ const Edit = ({ auth, pembayaran, pelanggan }) => {
         const pelangganData = pelanggan.find(p => p.id_pelanggan == pelangganId);
         setSelectedPelanggan(pelangganData);
         setData('id_pelanggan', pelangganId);
+    };
+
+    // Handler untuk update bulan dibayar
+    const handleBulanDibayarChange = (bulanDibayar) => {
+        if (bulanDibayar) {
+            const date = new Date(bulanDibayar);
+            
+            // Periode awal: tanggal 1 bulan tersebut
+            const periodeAwal = new Date(date.getFullYear(), date.getMonth(), 1)
+                .toISOString().split('T')[0];
+            
+            // Periode akhir: tanggal terakhir bulan tersebut
+            const periodeAkhir = new Date(date.getFullYear(), date.getMonth() + 1, 0)
+                .toISOString().split('T')[0];
+            
+            // Tanggal tempo: tanggal 10 bulan tersebut (jika belum ada)
+            if (!data.tanggal_tempo) {
+                const tanggalTempo = new Date(date.getFullYear(), date.getMonth(), 10)
+                    .toISOString().split('T')[0];
+                setData('tanggal_tempo', tanggalTempo);
+            }
+            
+            setData({
+                ...data,
+                bulan_dibayar: bulanDibayar,
+                periode_awal: periodeAwal,
+                periode_akhir: periodeAkhir,
+            });
+        } else {
+            setData({
+                ...data,
+                bulan_dibayar: '',
+                periode_awal: '',
+                periode_akhir: '',
+            });
+        }
     };
 
     const submit = (e) => {
@@ -52,7 +158,7 @@ const Edit = ({ auth, pembayaran, pelanggan }) => {
     // ✅ INPUTFIELD COMPONENT
     const InputField = React.memo(({ 
         id, label, type = 'text', value, error, icon: Icon, required = false, disabled = false,
-        onChange 
+        onChange, children 
     }) => {
         return (
             <div className="mb-6">
@@ -62,21 +168,23 @@ const Edit = ({ auth, pembayaran, pelanggan }) => {
                         {label} {required && <span className="text-red-500">*</span>}
                     </div>
                 </label>
-                <input
-                    id={id}
-                    type={type}
-                    value={value}
-                    onChange={onChange}
-                    disabled={disabled}
-                    className={`mt-1 block w-full rounded-lg border ${
-                        error 
-                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
-                            : 'border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500'
-                    } shadow-sm px-4 py-3 transition duration-150 dark:bg-gray-700 dark:text-white ${
-                        disabled ? 'bg-gray-100 dark:bg-gray-600 cursor-not-allowed' : ''
-                    }`}
-                    required={required}
-                />
+                {children ? children : (
+                    <input
+                        id={id}
+                        type={type}
+                        value={value}
+                        onChange={onChange}
+                        disabled={disabled}
+                        className={`mt-1 block w-full rounded-lg border ${
+                            error 
+                                ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                                : 'border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500'
+                        } shadow-sm px-4 py-3 transition duration-150 dark:bg-gray-700 dark:text-white ${
+                            disabled ? 'bg-gray-100 dark:bg-gray-600 cursor-not-allowed' : ''
+                        }`}
+                        required={required}
+                    />
+                )}
                 {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
             </div>
         );
@@ -225,6 +333,35 @@ const Edit = ({ auth, pembayaran, pelanggan }) => {
                                 {errors.jenis_pembayaran && <p className="text-red-500 text-sm mt-1">{errors.jenis_pembayaran}</p>}
                             </div>
 
+                            {/* Bulan yang Dibayar (Hanya untuk Pembayaran Bulanan) */}
+                            {data.jenis_pembayaran === 'Bulanan' && (
+                                <div className="mb-6">
+                                    <label htmlFor="bulan_dibayar" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <CalendarRange className="h-4 w-4" />
+                                            Bulan yang Dibayar
+                                        </div>
+                                    </label>
+                                    <select
+                                        id="bulan_dibayar"
+                                        value={data.bulan_dibayar}
+                                        onChange={(e) => handleBulanDibayarChange(e.target.value)}
+                                        className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500 shadow-sm px-4 py-3 transition duration-150 dark:bg-gray-700 dark:text-white"
+                                    >
+                                        <option value="">Pilih Bulan...</option>
+                                        {monthOptions.map((month) => (
+                                            <option key={month.value} value={month.value}>
+                                                {month.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        Pilih bulan yang akan dibayar. Periode dan tanggal tempo akan otomatis diatur.
+                                    </p>
+                                    {errors.bulan_dibayar && <p className="text-red-500 text-sm mt-1">{errors.bulan_dibayar}</p>}
+                                </div>
+                            )}
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {/* Jumlah Bayar */}
                                 <InputField
@@ -249,6 +386,65 @@ const Edit = ({ auth, pembayaran, pelanggan }) => {
                                     required
                                     onChange={(e) => handleInputChange('tanggal_pembayaran', e.target.value)}
                                 />
+
+                                {/* Informasi Periode (Read-only jika ada) */}
+                                {data.periode_awal && data.periode_akhir && (
+                                    <div className="mb-6">
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <CalendarRange className="h-4 w-4" />
+                                                Rentang Periode
+                                            </div>
+                                        </label>
+                                        <div className="mt-1 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600">
+                                            <p className="text-sm text-gray-900 dark:text-white font-medium">
+                                                {new Date(data.periode_awal).toLocaleDateString('id-ID', {
+                                                    day: '2-digit',
+                                                    month: 'long',
+                                                    year: 'numeric'
+                                                })} - {new Date(data.periode_akhir).toLocaleDateString('id-ID', {
+                                                    day: '2-digit',
+                                                    month: 'long',
+                                                    year: 'numeric'
+                                                })}
+                                            </p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                Periode pembayaran untuk bulan yang dipilih
+                                            </p>
+                                        </div>
+                                        {errors.periode_awal && <p className="text-red-500 text-sm mt-1">{errors.periode_awal}</p>}
+                                        {errors.periode_akhir && <p className="text-red-500 text-sm mt-1">{errors.periode_akhir}</p>}
+                                    </div>
+                                )}
+
+                                {/* Tanggal Tempo */}
+                                <InputField
+                                    id="tanggal_tempo"
+                                    label="Tanggal Jatuh Tempo"
+                                    type="date"
+                                    value={data.tanggal_tempo}
+                                    error={errors.tanggal_tempo}
+                                    icon={Clock}
+                                    onChange={(e) => handleInputChange('tanggal_tempo', e.target.value)}
+                                >
+                                    <div className="space-y-2">
+                                        <input
+                                            id="tanggal_tempo"
+                                            type="date"
+                                            value={data.tanggal_tempo}
+                                            onChange={(e) => handleInputChange('tanggal_tempo', e.target.value)}
+                                            className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500 shadow-sm px-4 py-3 transition duration-150 dark:bg-gray-700 dark:text-white"
+                                        />
+                                        {tempoInfo && (
+                                            <div className={`p-2 rounded border ${tempoInfo.borderColor} ${tempoInfo.bgColor}`}>
+                                                <p className={`text-xs font-medium ${tempoInfo.color}`}>
+                                                    <AlertCircle className="inline h-3 w-3 mr-1" />
+                                                    {tempoInfo.message}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </InputField>
 
                                 {/* Metode Bayar */}
                                 <div className="mb-6">
@@ -293,6 +489,25 @@ const Edit = ({ auth, pembayaran, pelanggan }) => {
                                     </select>
                                     {errors.status_bayar && <p className="text-red-500 text-sm mt-1">{errors.status_bayar}</p>}
                                 </div>
+                            </div>
+
+                            {/* Keterangan */}
+                            <div className="mb-6">
+                                <label htmlFor="keterangan" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <CreditCard className="h-4 w-4" />
+                                        Keterangan
+                                    </div>
+                                </label>
+                                <textarea
+                                    id="keterangan"
+                                    rows={3}
+                                    value={data.keterangan}
+                                    onChange={(e) => handleInputChange('keterangan', e.target.value)}
+                                    className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500 shadow-sm px-4 py-3 transition duration-150 dark:bg-gray-700 dark:text-white resize-none"
+                                    placeholder="Keterangan pembayaran..."
+                                />
+                                {errors.keterangan && <p className="text-red-500 text-sm mt-1">{errors.keterangan}</p>}
                             </div>
 
                             {/* Action Buttons */}

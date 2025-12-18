@@ -135,9 +135,26 @@ class AdminPembayaranController extends Controller
             'jenis_pembayaran' => 'required|in:Instalasi,Bulanan',
             'jumlah_bayar' => 'required|numeric|min:0',
             'tanggal_pembayaran' => 'required|date',
+            'periode_awal' => 'nullable|date',
+            'periode_akhir' => 'nullable|date',
+            'tanggal_tempo' => 'nullable|date',
+            'bulan_dibayar' => 'nullable|date',
             'metode_bayar' => 'required|in:Transfer,QRIS,Tunai',
             'keterangan' => 'nullable|string|max:500',
         ]);
+
+        // Hitung status tempo
+        $statusTempo = 'Belum Jatuh Tempo';
+        if ($validated['tanggal_tempo'] && $validated['tanggal_pembayaran']) {
+            $tanggalTempo = Carbon::parse($validated['tanggal_tempo']);
+            $tanggalBayar = Carbon::parse($validated['tanggal_pembayaran']);
+            
+            if ($tanggalBayar->lessThanOrEqualTo($tanggalTempo)) {
+                $statusTempo = 'Tepat Waktu';
+            } else {
+                $statusTempo = 'Terlambat';
+            }
+        }
 
         // Buat pembayaran
         $pembayaran = Pembayaran::create([
@@ -146,8 +163,13 @@ class AdminPembayaranController extends Controller
             'jenis_pembayaran' => $validated['jenis_pembayaran'],
             'jumlah_bayar' => $validated['jumlah_bayar'],
             'tanggal_pembayaran' => $validated['tanggal_pembayaran'],
+            'periode_awal' => $validated['periode_awal'] ?? null,
+            'periode_akhir' => $validated['periode_akhir'] ?? null,
+            'tanggal_tempo' => $validated['tanggal_tempo'] ?? null,
+            'bulan_dibayar' => $validated['bulan_dibayar'] ?? null,
             'metode_bayar' => $validated['metode_bayar'],
             'status_bayar' => 'Lunas',
+            'status_tempo' => $statusTempo,
             'bukti_bayar' => null,
             'keterangan' => $validated['keterangan'] ?? null,
         ]);
@@ -158,6 +180,7 @@ class AdminPembayaranController extends Controller
         return redirect()->route('admin.pembayaran.index')
             ->with('success', 'Pembayaran berhasil dicatat dan paket pelanggan diperbarui!');
     }
+
 
     /**
      * Menampilkan form edit pembayaran
@@ -184,20 +207,40 @@ class AdminPembayaranController extends Controller
     /**
      * Update data pembayaran
      */
-    public function update(Request $request, $id_pembayaran)
+     public function update(Request $request, $id_pembayaran)
     {
         $pembayaran = Pembayaran::findOrFail($id_pembayaran);
 
         $validated = $request->validate([
             'id_pelanggan' => 'required|exists:pelanggan,id_pelanggan',
-            'id_paket' => 'nullable|exists:paket_internet,id_paket', 
+            'id_paket' => 'nullable|exists:paket_internet,id_paket',
             'jenis_pembayaran' => 'required|in:Instalasi,Bulanan',
             'jumlah_bayar' => 'required|numeric|min:0',
             'tanggal_pembayaran' => 'required|date',
+            'periode_awal' => 'nullable|date',
+            'periode_akhir' => 'nullable|date',
+            'tanggal_tempo' => 'nullable|date',
+            'bulan_dibayar' => 'nullable|date',
             'metode_bayar' => 'required|in:Transfer,QRIS,Tunai',
             'status_bayar' => 'required|in:Lunas,Belum Bayar,Pending',
             'keterangan' => 'nullable|string|max:500',
         ]);
+
+        // Hitung status tempo
+        $statusTempo = 'Belum Jatuh Tempo';
+        if ($validated['tanggal_tempo'] && $validated['tanggal_pembayaran']) {
+            $tanggalTempo = Carbon::parse($validated['tanggal_tempo']);
+            $tanggalBayar = Carbon::parse($validated['tanggal_pembayaran']);
+            
+            if ($tanggalBayar->lessThanOrEqualTo($tanggalTempo)) {
+                $statusTempo = 'Tepat Waktu';
+            } else {
+                $statusTempo = 'Terlambat';
+            }
+        }
+
+        // Tambah status tempo ke data yang akan diupdate
+        $validated['status_tempo'] = $statusTempo;
 
         $pembayaran->update($validated);
 

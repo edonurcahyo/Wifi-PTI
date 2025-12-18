@@ -1,7 +1,7 @@
 // resources/js/Pages/Customer/Dashboard.tsx
 import React from 'react';
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from '@inertiajs/react';
 import Swal from "sweetalert2";
 
@@ -47,8 +47,18 @@ import {
   CreditCard,
   FileText,
   History,
-  FileImage, // PERUBAHAN: Ditambahkan
+  FileImage,
   AlertCircle,
+  CalendarDays,
+  CalendarRange,
+  Timer,
+  ClockAlert,
+  CheckCircle2,
+  XCircle,
+  CalendarClock,
+  TimerOff,
+  TimerReset,
+  Hourglass,
 } from "lucide-react";
 import { Button } from "@/Components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/Components/ui/card";
@@ -69,6 +79,11 @@ interface Pembayaran {
   jumlah_bayar: number;
   metode_bayar: string;
   status_bayar: string;
+  status_tempo?: string;
+  tanggal_tempo?: string;
+  periode_awal?: string;
+  periode_akhir?: string;
+  bulan_dibayar?: string;
   bukti_bayar: string | null;
   keterangan: string | null;
 }
@@ -81,6 +96,8 @@ interface Pelanggan {
   alamat: string;
   paket?: Paket;
   status_aktif: string;
+  tanggal_berlangganan?: string;
+  tanggal_berakhir?: string;
   pembayaran_terakhir: Pembayaran[];
 }
 
@@ -99,15 +116,47 @@ interface CustomerDashboardProps extends PageProps {
 export default function CustomerDashboard() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  // PERUBAHAN: Tambah state untuk modal upload
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<{
     id: number;
     type: string;
     amount: number;
   } | null>(null);
+  const [timeLeft, setTimeLeft] = useState<{
+    days: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+  } | null>(null);
 
   const { pelanggan, paketList } = usePage<CustomerDashboardProps>().props;
+
+  // Hitung waktu tersisa hingga tanggal berakhir
+  useEffect(() => {
+    if (pelanggan.tanggal_berakhir) {
+      const calculateTimeLeft = () => {
+        const now = new Date();
+        const endDate = new Date(pelanggan.tanggal_berakhir || '');
+        const difference = endDate.getTime() - now.getTime();
+        
+        if (difference > 0) {
+          const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+          
+          setTimeLeft({ days, hours, minutes, seconds });
+        } else {
+          setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        }
+      };
+      
+      calculateTimeLeft();
+      const timer = setInterval(calculateTimeLeft, 1000);
+      
+      return () => clearInterval(timer);
+    }
+  }, [pelanggan.tanggal_berakhir]);
 
   const fadeInUp = {
     hidden: { opacity: 0, y: 60 },
@@ -137,13 +186,96 @@ export default function CustomerDashboard() {
     },
   };
 
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  const formatDateTime = (dateString: string | undefined) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getTempoStatusBadge = (status: string | undefined) => {
+    switch(status) {
+      case 'Tepat Waktu':
+        return (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+            <CheckCircle2 className="w-3 h-3 mr-1" />
+            Tepat Waktu
+          </span>
+        );
+      case 'Terlambat':
+        return (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
+            <ClockAlert className="w-3 h-3 mr-1" />
+            Terlambat
+          </span>
+        );
+      case 'Belum Jatuh Tempo':
+        return (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+            <Timer className="w-3 h-3 mr-1" />
+            Belum Jatuh Tempo
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900/30">
+            {status || 'Belum Ditentukan'}
+          </span>
+        );
+    }
+  };
+
+  const getPaymentStatusBadge = (status: string) => {
+    switch(status) {
+      case 'Lunas':
+        return (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+            <CheckCircle2 className="w-3 h-3 mr-1" />
+            Lunas
+          </span>
+        );
+      case 'Pending':
+        return (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+            <Hourglass className="w-3 h-3 mr-1" />
+            Pending
+          </span>
+        );
+      case 'Belum Bayar':
+        return (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
+            <XCircle className="w-3 h-3 mr-1" />
+            Belum Bayar
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900/30">
+            {status}
+          </span>
+        );
+    }
+  };
+
   const handleWhatsApp = () => {
     const message = `Halo ASTINet, saya ${pelanggan.nama_pelanggan} ingin berlangganan paket internet.`;
     const phone = "6281382552884";
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
-  // PERUBAHAN: Fungsi untuk buka modal upload
   const openUploadModal = (paymentId: number, paymentType: string, amount: number) => {
     console.log('Opening upload modal for payment:', { paymentId, paymentType, amount });
     setSelectedPayment({ id: paymentId, type: paymentType, amount });
@@ -175,7 +307,6 @@ export default function CustomerDashboard() {
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
 
-      // VALIDASI: Tidak ada file
       if (!data.bukti_bayar || !selectedPayment) {
         Swal.fire({
           icon: "warning",
@@ -186,15 +317,12 @@ export default function CustomerDashboard() {
         return;
       }
 
-      // Set keterangan sebelum submit
       setData("keterangan", notes);
 
-      // KIRIM POST INERTIA
       post(route("customer.payment.upload.proof", selectedPayment.id), {
         forceFormData: true,
         preserveScroll: true,
 
-        // SUCCESS
         onSuccess: () => {
           Swal.fire({
             icon: "success",
@@ -207,7 +335,6 @@ export default function CustomerDashboard() {
           });
         },
 
-        // ERROR
         onError: (errors) => {
           console.error("Upload errors:", errors);
 
@@ -231,7 +358,6 @@ export default function CustomerDashboard() {
       setPreview(null);
       setNotes("");
 
-      // RESET FORM DATA
       setData({
         bukti_bayar: null,
         keterangan: "",
@@ -477,116 +603,17 @@ export default function CustomerDashboard() {
     );
   };
 
-  const paketInternet = paketList && paketList.length > 0 ? 
-    paketList.map(paket => ({
-      id: paket.id_paket,
-      nama: paket.nama_paket,
-      kecepatan: paket.kecepatan,
-      harga: paket.harga_bulanan,
-      fitur: ["Unlimited Quota", "Akses 24/7", "Support Teknis", "Jaringan Stabil"],
-      populer: paket.nama_paket === "Standard",
-      warna: paket.nama_paket === "Basic" ? "from-blue-500 to-cyan-500" : 
-             paket.nama_paket === "Standard" ? "from-purple-500 to-pink-500" : 
-             "from-orange-500 to-red-500",
-    })) : [
-    {
-      id: 1,
-      nama: "Basic",
-      kecepatan: "20 Mbps",
-      harga: 150000,
-      fitur: ["Up to 30 Mbps", "Unlimited Quota", "Akses 24/7", "Support Teknis"],
-      populer: false,
-      warna: "from-blue-500 to-cyan-500",
-    },
-    {
-      id: 2,
-      nama: "Standard",
-      kecepatan: "30 Mbps",
-      harga: 200000,
-      fitur: ["Up to 50 Mbps", "Unlimited Quota", "Akses 24/7", "Support Teknis", "Priority Support"],
-      populer: true,
-      warna: "from-purple-500 to-pink-500",
-    },
-    {
-      id: 3,
-      nama: "Premium",
-      kecepatan: "50 Mbps",
-      harga: 250000,
-      fitur: ["Up to 100 Mbps", "Unlimited Quota", "Akses 24/7", "Support Teknis", "Priority Support", "Static IP"],
-      populer: false,
-      warna: "from-orange-500 to-red-500",
-    },
-  ];
-
-  const fiturLayanan = [
-    {
-      icon: <Zap className="h-8 w-8" />,
-      title: "Kecepatan Tinggi",
-      description: "Internet super cepat dengan teknologi fiber optic terbaru",
-      color: "text-yellow-500",
-    },
-    {
-      icon: <ShieldCheck className="h-8 w-8" />,
-      title: "Aman & Terjaga",
-      description: "Jaringan yang stabil dan aman dengan proteksi 24/7",
-      color: "text-green-500",
-    },
-    {
-      icon: <Clock4 className="h-8 w-8" />,
-      title: "24/7 Support",
-      description: "Tim support siap membantu kapan saja Anda membutuhkan",
-      color: "text-blue-500",
-    },
-    {
-      icon: <InfinityIcon className="h-8 w-8" />,
-      title: "Unlimited Quota",
-      description: "Tanpa batas kuota, bebas streaming dan download",
-      color: "text-purple-500",
-    },
-  ];
-
-  const statistik = [
-    {
-      icon: <Users className="h-6 w-6" />,
-      value: "100+",
-      label: "Pelanggan Aktif",
-      color: "text-blue-600",
-    },
-    {
-      icon: <TrendingUp className="h-6 w-6" />,
-      value: "99.8%",
-      label: "Uptime Server",
-      color: "text-green-600",
-    },
-    {
-      icon: <Award className="h-6 w-6" />,
-      value: "4.9/5",
-      label: "Rating Pelanggan",
-      color: "text-yellow-600",
-    },
-    {
-      icon: <Clock className="h-6 w-6" />,
-      value: "24/7",
-      label: "Support Tersedia",
-      color: "text-purple-600",
-    },
-  ];
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
-  };
-
   const pendingPembayaran = pelanggan.pembayaran_terakhir?.find(
     p => p.status_bayar === 'Pending' && !p.bukti_bayar
   );
 
+  const upcomingDueDate = pelanggan.pembayaran_terakhir?.find(
+    p => p.status_bayar === 'Belum Bayar' || 
+         (p.tanggal_tempo && new Date(p.tanggal_tempo) > new Date())
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-      {/* PERUBAHAN: Panggil modal upload */}
       <UploadPaymentModal />
 
       {/* Header */}
@@ -607,6 +634,9 @@ export default function CustomerDashboard() {
             </a>
             <a href="#pembayaran" className="text-sm font-medium hover:text-[#38adc3] transition-colors">
               Pembayaran
+            </a>
+            <a href="#periode" className="text-sm font-medium hover:text-[#38adc3] transition-colors">
+              Periode & Tempo
             </a>
             <a href="#pilihan-paket" className="text-sm font-medium hover:text-[#38adc3] transition-colors">
               Pilihan Paket
@@ -681,73 +711,81 @@ export default function CustomerDashboard() {
           </div>
         </div>
 
-        {mobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="md:hidden border-t bg-white"
-          >
-            <nav className="container mx-auto px-4 py-4 flex flex-col gap-4">
-              <a
-                href="#dashboard"
-                className="text-sm font-medium hover:text-[#38adc3] transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
+       {/* Mobile Menu */}
+          {mobileMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="md:hidden border-t bg-white"
               >
-                Dashboard
-              </a>
-              <a
-                href="#paket"
-                className="text-sm font-medium hover:text-[#38adc3] transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Paket Saya
-              </a>
-              <a
-                href="#pembayaran"
-                className="text-sm font-medium hover:text-[#38adc3] transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Pembayaran
-              </a>
-              <a
-                href="#pilihan-paket"
-                className="text-sm font-medium hover:text-[#38adc3] transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Pilihan Paket
-              </a>
-              <a
-                href="#fitur"
-                className="text-sm font-medium hover:text-[#38adc3] transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Fitur
-              </a>
-              <a
-                href="#bantuan"
-                className="text-sm font-medium hover:text-[#38adc3] transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Bantuan
-              </a>
-              <Link
-                href="/pelanggan/profile"
-                className="text-sm font-medium hover:text-[#38adc3] transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Profil Saya
-              </Link>
-              <Link
-                href={route('customer.payment.history')}
-                className="text-sm font-medium hover:text-[#38adc3] transition-colors"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Riwayat Pembayaran
-              </Link>
-            </nav>
-          </motion.div>
-        )}
+                <nav className="container mx-auto px-4 py-4 flex flex-col gap-4">
+                  <a
+                    href="#dashboard"
+                    className="text-sm font-medium hover:text-[#38adc3] transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Dashboard
+                  </a>
+                  <a
+                    href="#paket"
+                    className="text-sm font-medium hover:text-[#38adc3] transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Paket Saya
+                  </a>
+                  <a
+                    href="#pembayaran"
+                    className="text-sm font-medium hover:text-[#38adc3] transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Pembayaran
+                  </a>
+                  <a
+                    href="#periode"
+                    className="text-sm font-medium hover:text-[#38adc3] transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Periode & Tempo
+                  </a>
+                  <a
+                    href="#pilihan-paket"
+                    className="text-sm font-medium hover:text-[#38adc3] transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Pilihan Paket
+                  </a>
+                  <a
+                    href="#fitur"
+                    className="text-sm font-medium hover:text-[#38adc3] transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Fitur
+                  </a>
+                  <a
+                    href="#bantuan"
+                    className="text-sm font-medium hover:text-[#38adc3] transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Bantuan
+                  </a> {/* TAG PENUTUP DITAMBAHKAN */}
+                  <Link
+                    href="/pelanggan/profile"
+                    className="text-sm font-medium hover:text-[#38adc3] transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Profil Saya
+                  </Link>
+                  <Link
+                    href={route('customer.payment.history')}
+                    className="text-sm font-medium hover:text-[#38adc3] transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Riwayat Pembayaran
+                  </Link>
+                </nav>
+              </motion.div>
+            )}
       </header>
 
       {/* Hero Section - Welcome */}
@@ -774,7 +812,6 @@ export default function CustomerDashboard() {
               Kelola paket internet dan pembayaran Anda dengan mudah melalui dashboard ASTINet.
             </motion.p>
             
-            {/* PERUBAHAN: Ganti Link dengan button */}
             {pendingPembayaran && (
               <motion.div 
                 variants={fadeInUp}
@@ -819,34 +856,7 @@ export default function CustomerDashboard() {
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={stagger}
-            className="grid grid-cols-2 md:grid-cols-4 gap-6"
-          >
-            {statistik.map((stat, index) => (
-              <motion.div
-                key={index}
-                variants={fadeInUp}
-                className="text-center p-6 rounded-xl bg-gradient-to-br from-white to-gray-50 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300"
-              >
-                <div className={`mx-auto mb-3 w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center ${stat.color}`}>
-                  {stat.icon}
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</h3>
-                <p className="text-gray-600 text-sm">{stat.label}</p>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Paket Section */}
+      {/* Paket Section dengan Periode */}
       <section id="paket" className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">
           <motion.div
@@ -869,87 +879,161 @@ export default function CustomerDashboard() {
             whileInView="visible"
             viewport={{ once: true }}
             variants={stagger}
-            className="max-w-2xl mx-auto"
+            className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6"
           >
+            {/* Card 1: Informasi Paket */}
             <Card className="border-2 border-[#38adc3] shadow-xl hover:shadow-2xl transition-all duration-300">
               <CardHeader className="text-center pb-8 pt-12 bg-gradient-to-r from-[#38adc3] to-[#2672c6] text-white rounded-t-lg">
-                  <CardTitle className="text-2xl mb-4">
-                    {pelanggan.paket?.nama_paket || "Belum Berlangganan"}
-                  </CardTitle>
-                  
-                  <div className="mb-2">
-                    <span className="text-5xl font-bold">
-                      {pelanggan.paket ? (
-                        formatRupiah(pelanggan.paket.harga_bulanan) 
-                      ) : (
-                        "Rp 0"
-                      )}
-                    </span>
-                    <span className="text-blue-100 ml-2 text-lg">/ bulan</span>
-                  </div>
-                  
-                  <p className="text-blue-100 font-semibold text-lg">
-                    {pelanggan.paket?.kecepatan || "0 Mbps"}
-                  </p>
-                  
-                  <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium mt-4 ${
-                    isAktif 
-                      ? 'bg-green-500 text-white' 
-                      : 'bg-red-500 text-white'
-                  }`}>
-                    {isAktif ? '🟢 Aktif' : '🔴 Tidak Aktif'}
-                  </div>
-                </CardHeader>
-              <CardContent className="space-y-6 p-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
-                  <div className="space-y-3">
-                    <div>
-                      <p className="font-semibold text-gray-700">Nama Pelanggan</p>
-                      <p className="text-gray-600">{pelanggan.nama_pelanggan}</p>
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-700">Email</p>
-                      <p className="text-gray-600">{pelanggan.email}</p>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="font-semibold text-gray-700">No. HP</p>
-                      <p className="text-gray-600">{pelanggan.no_hp}</p>
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-700">Alamat</p>
-                      <p className="text-gray-600">{pelanggan.alamat}</p>
-                    </div>
-                  </div>
+                <CardTitle className="text-2xl mb-4">
+                  {pelanggan.paket?.nama_paket || "Belum Berlangganan"}
+                </CardTitle>
+                
+                <div className="mb-2">
+                  <span className="text-5xl font-bold">
+                    {pelanggan.paket ? (
+                      formatRupiah(pelanggan.paket.harga_bulanan) 
+                    ) : (
+                      "Rp 0"
+                    )}
+                  </span>
+                  <span className="text-blue-100 ml-2 text-lg">/ bulan</span>
                 </div>
                 
-                {!pelanggan.paket && (
+                <p className="text-blue-100 font-semibold text-lg">
+                  {pelanggan.paket?.kecepatan || "0 Mbps"}
+                </p>
+                
+                <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium mt-4 ${
+                  isAktif 
+                    ? 'bg-green-500 text-white' 
+                    : 'bg-red-500 text-white'
+                }`}>
+                  {isAktif ? '🟢 Aktif' : '🔴 Tidak Aktif'}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6 p-8">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-gray-600">Nama:</span>
+                    <span className="font-semibold">{pelanggan.nama_pelanggan}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-gray-600">Email:</span>
+                    <span className="font-semibold">{pelanggan.email}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-gray-600">No. HP:</span>
+                    <span className="font-semibold">{pelanggan.no_hp}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Card 2: Periode Berlangganan */}
+            <Card className="border-2 border-green-500 shadow-xl hover:shadow-2xl transition-all duration-300">
+              <CardHeader className="text-center pb-8 pt-12 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-t-lg">
+                <CardTitle className="text-2xl mb-4 flex items-center justify-center gap-2">
+                  <CalendarDays className="h-6 w-6" />
+                  Periode Berlangganan
+                </CardTitle>
+                <div className="text-lg text-green-100">
+                  <CalendarRange className="h-6 w-6 inline mr-2" />
+                  Rentang Waktu Paket
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6 p-8">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-gray-600 flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Mulai Berlaku:
+                    </span>
+                    <span className="font-semibold text-green-600">
+                      {formatDate(pelanggan.tanggal_berlangganan)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-gray-600 flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Berakhir Pada:
+                    </span>
+                    <span className="font-semibold text-red-600">
+                      {formatDate(pelanggan.tanggal_berakhir)}
+                    </span>
+                  </div>
+                  
+                  {timeLeft && (
+                    <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl border border-blue-200">
+                      <div className="flex items-center justify-center gap-2 mb-3">
+                        <Timer className="h-5 w-5 text-blue-600" />
+                        <span className="font-semibold text-blue-800">Waktu Tersisa:</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2 text-center">
+                        <div className="bg-white p-3 rounded-lg shadow-sm">
+                          <div className="text-2xl font-bold text-blue-600">{timeLeft.days}</div>
+                          <div className="text-xs text-gray-600">Hari</div>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg shadow-sm">
+                          <div className="text-2xl font-bold text-blue-600">{timeLeft.hours}</div>
+                          <div className="text-xs text-gray-600">Jam</div>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg shadow-sm">
+                          <div className="text-2xl font-bold text-blue-600">{timeLeft.minutes}</div>
+                          <div className="text-xs text-gray-600">Menit</div>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg shadow-sm">
+                          <div className="text-2xl font-bold text-blue-600">{timeLeft.seconds}</div>
+                          <div className="text-xs text-gray-600">Detik</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Card 3: Aksi Cepat */}
+            <Card className="border-2 border-purple-500 shadow-xl hover:shadow-2xl transition-all duration-300">
+              <CardHeader className="text-center pb-8 pt-12 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg">
+                <CardTitle className="text-2xl mb-4">
+                  Aksi Cepat
+                </CardTitle>
+                <div className="text-lg text-purple-100">
+                  Kelola paket Anda
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4 p-8">
+                {!pelanggan.paket ? (
                   <Button
-                    className="w-full mt-6 bg-gradient-to-r from-[#38adc3] to-[#2672c6] hover:from-[#2e9bb0] hover:to-[#1e5fa3] text-white py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+                    className="w-full bg-gradient-to-r from-[#38adc3] to-[#2672c6] hover:from-[#2e9bb0] hover:to-[#1e5fa3] text-white py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
                     onClick={handleWhatsApp}
                   >
                     <Rocket className="mr-2 h-5 w-5" />
                     Langganan Sekarang
                   </Button>
-                )}
-
-                {pelanggan.paket && (
-                  <div className="mt-6 flex gap-3">
+                ) : (
+                  <>
                     <Link
                       href={route('customer.payment.create')}
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg text-center font-medium transition-colors"
+                      className="w-full block bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg text-center font-medium transition-colors"
                     >
                       Bayar Tagihan
                     </Link>
                     <Button
                       variant="outline"
-                      className="flex-1 border-[#38adc3] text-[#38adc3] hover:bg-[#38adc3] hover:text-white"
+                      className="w-full border-[#38adc3] text-[#38adc3] hover:bg-[#38adc3] hover:text-white"
                       onClick={handleWhatsApp}
                     >
                       Upgrade Paket
                     </Button>
-                  </div>
+                    <Button
+                      variant="outline"
+                      className="w-full border-amber-500 text-amber-600 hover:bg-amber-500 hover:text-white"
+                      onClick={handleWhatsApp}
+                    >
+                      Perpanjang Paket
+                    </Button>
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -957,8 +1041,252 @@ export default function CustomerDashboard() {
         </div>
       </section>
 
+      {/* Section Periode & Tempo */}
+      <section id="periode" className="py-20 bg-white">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={stagger}
+            className="text-center mb-16"
+          >
+            <motion.h2 variants={fadeInUp} className="text-4xl font-bold mb-4">
+              Periode & Jatuh Tempo
+            </motion.h2>
+            <motion.p variants={fadeInUp} className="text-gray-600 max-w-2xl mx-auto">
+              Pantau periode pembayaran dan jadwal jatuh tempo Anda
+            </motion.p>
+          </motion.div>
+
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={stagger}
+            className="max-w-6xl mx-auto"
+          >
+            {/* Card Status Tempo */}
+            <div className="mb-8">
+              <Card className="border-2 border-blue-200 shadow-lg">
+                <CardHeader className="bg-blue-50">
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <Timer className="h-5 w-5 text-blue-600" />
+                    Status Pembayaran & Tempo
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="text-center p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-200">
+                      <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-green-100 flex items-center justify-center">
+                        <CheckCircle2 className="h-6 w-6 text-green-600" />
+                      </div>
+                      <h3 className="font-semibold text-green-800 mb-2">Status Paket</h3>
+                      <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                        isAktif 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {isAktif ? 'Aktif' : 'Tidak Aktif'}
+                      </div>
+                    </div>
+
+                    <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl border border-blue-200">
+                      <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-blue-100 flex items-center justify-center">
+                        <CalendarClock className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <h3 className="font-semibold text-blue-800 mb-2">Periode Aktif</h3>
+                      <p className="text-sm text-gray-600">
+                        {formatDate(pelanggan.tanggal_berlangganan)} - {formatDate(pelanggan.tanggal_berakhir)}
+                      </p>
+                    </div>
+
+                    <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                      <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-purple-100 flex items-center justify-center">
+                        <ClockAlert className="h-6 w-6 text-purple-600" />
+                      </div>
+                      <h3 className="font-semibold text-purple-800 mb-2">Status Tempo</h3>
+                      {getTempoStatusBadge(
+                        pelanggan.pembayaran_terakhir?.[0]?.status_tempo
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Tabel Jatuh Tempo */}
+            <Card className="border-2 border-amber-200 shadow-lg">
+              <CardHeader className="bg-amber-50">
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <CalendarClock className="h-5 w-5 text-amber-600" />
+                  Jadwal Jatuh Tempo Mendatang
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jenis</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Periode</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jatuh Tempo</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {pelanggan.pembayaran_terakhir && pelanggan.pembayaran_terakhir.length > 0 ? (
+                        pelanggan.pembayaran_terakhir.map((pembayaran, index) => (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                {pembayaran.jenis_pembayaran === 'Bulanan' ? (
+                                  <Calendar className="h-4 w-4 text-blue-500" />
+                                ) : (
+                                  <CreditCard className="h-4 w-4 text-green-500" />
+                                )}
+                                <span className="font-medium">{pembayaran.jenis_pembayaran}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {pembayaran.periode_awal && pembayaran.periode_akhir ? (
+                                <div className="text-sm">
+                                  <div>{formatDate(pembayaran.periode_awal)}</div>
+                                  <div className="text-gray-500">s/d</div>
+                                  <div>{formatDate(pembayaran.periode_akhir)}</div>
+                                </div>
+                              ) : pembayaran.bulan_dibayar ? (
+                                <span>{formatDate(pembayaran.bulan_dibayar)}</span>
+                              ) : (
+                                <span className="text-gray-400">-</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {pembayaran.tanggal_tempo ? (
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="h-4 w-4 text-amber-500" />
+                                  <span className="font-medium text-amber-600">
+                                    {formatDate(pembayaran.tanggal_tempo)}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-gray-400">-</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="space-y-1">
+                                {getPaymentStatusBadge(pembayaran.status_bayar)}
+                                {pembayaran.status_tempo && pembayaran.status_tempo !== 'Belum Jatuh Tempo' && (
+                                  <div className="mt-1">
+                                    {getTempoStatusBadge(pembayaran.status_tempo)}
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {pembayaran.status_bayar === 'Pending' && !pembayaran.bukti_bayar ? (
+                                <button
+                                  onClick={() => openUploadModal(
+                                    pembayaran.id_pembayaran,
+                                    pembayaran.jenis_pembayaran,
+                                    pembayaran.jumlah_bayar
+                                  )}
+                                  className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                                >
+                                  Upload Bukti
+                                </button>
+                              ) : pembayaran.bukti_bayar ? (
+                                <a
+                                  href={`/storage/bukti_pembayaran/${pembayaran.bukti_bayar}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-green-600 hover:text-green-800 font-medium text-sm"
+                                >
+                                  Lihat Bukti
+                                </a>
+                              ) : (
+                                <span className="text-gray-400">-</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-8 text-center">
+                            <div className="flex flex-col items-center justify-center">
+                              <CalendarClock className="w-12 h-12 text-gray-400 mb-4" />
+                              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                Belum ada data pembayaran
+                              </h3>
+                              <p className="text-gray-500">
+                                Silakan buat pembayaran baru untuk melihat jadwal tempo
+                              </p>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Info Box */}
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-5">
+                <div className="flex items-start">
+                  <CalendarClock className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-3 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-blue-800 dark:text-blue-300 mb-1">
+                      Panduan Periode & Tempo
+                    </h4>
+                    <ul className="text-sm text-blue-700 dark:text-blue-400 space-y-1">
+                      <li className="flex items-center">
+                        <CheckCircle2 className="w-3 h-3 mr-2" />
+                        <span><strong>Periode Aktif:</strong> Masa berlaku paket Anda</span>
+                      </li>
+                      <li className="flex items-center">
+                        <ClockAlert className="w-3 h-3 mr-2" />
+                        <span><strong>Jatuh Tempo:</strong> Batas waktu pembayaran</span>
+                      </li>
+                      <li className="flex items-center">
+                        <Timer className="w-3 h-3 mr-2" />
+                        <span><strong>Tepat Waktu:</strong> Bayar sebelum/sesuai tempo</span>
+                      </li>
+                      <li className="flex items-center">
+                        <TimerOff className="w-3 h-3 mr-2" />
+                        <span><strong>Terlambat:</strong> Bayar setelah tanggal tempo</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-5">
+                <div className="flex items-start">
+                  <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 mr-3 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-amber-800 dark:text-amber-300 mb-1">
+                      Tips Pembayaran Tepat Waktu
+                    </h4>
+                    <ul className="text-sm text-amber-700 dark:text-amber-400 space-y-1">
+                      <li>• Setel pengingat 3 hari sebelum jatuh tempo</li>
+                      <li>• Gunakan fitur auto-debit jika tersedia</li>
+                      <li>• Upload bukti bayar segera setelah transfer</li>
+                      <li>• Perpanjang paket 7 hari sebelum berakhir</li>
+                      <li>• Hubungi support jika ada kendala pembayaran</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
       {/* Pembayaran & Riwayat Section */}
-      <section id="pembayaran" className="py-20 bg-white">
+      <section id="pembayaran" className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">
           <motion.div
             initial="hidden"
@@ -1001,7 +1329,7 @@ export default function CustomerDashboard() {
               </Card>
             </motion.div>
             
-            {/* Button Upload Bukti - MINIMAL */}
+            {/* Button Upload Bukti */}
             <motion.div variants={fadeInUp}>
               <Card className="h-full border-2 border-green-200 hover:border-green-500 transition-all duration-300 hover:shadow-xl">
                 <CardContent className="p-6 flex flex-col items-center justify-center h-full text-center">
@@ -1047,8 +1375,8 @@ export default function CustomerDashboard() {
             </motion.div>
           </motion.div>
 
-          {/* Tabel Riwayat Pembayaran Terakhir */}
-          {pelanggan.pembayaran_terakhir && pelanggan.pembayaran_terakhir.length > 0 && (
+          {/* Upcoming Due Dates */}
+          {upcomingDueDate && (
             <motion.div
               initial="hidden"
               whileInView="visible"
@@ -1056,83 +1384,48 @@ export default function CustomerDashboard() {
               variants={fadeInUp}
               className="mt-12 max-w-4xl mx-auto"
             >
-              <h3 className="text-xl font-bold mb-4">Pembayaran Terakhir</h3>
-              <div className="bg-white rounded-xl border overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanggal</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jenis</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jumlah</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {pelanggan.pembayaran_terakhir.map((pembayaran) => (
-                        <tr key={pembayaran.id_pembayaran} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            {formatDate(pembayaran.tanggal_pembayaran)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            {pembayaran.jenis_pembayaran}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold">
-                            {formatRupiah(pembayaran.jumlah_bayar)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              pembayaran.status_bayar === 'Lunas' 
-                                ? 'bg-green-100 text-green-800'
-                                : pembayaran.status_bayar === 'Pending'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              {pembayaran.status_bayar}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            {/* PERUBAHAN: Ganti Link dengan button */}
-                            {pembayaran.status_bayar === 'Pending' && !pembayaran.bukti_bayar && (
-                              <button
-                                onClick={() => openUploadModal(
-                                  pembayaran.id_pembayaran,
-                                  pembayaran.jenis_pembayaran,
-                                  pembayaran.jumlah_bayar
-                                )}
-                                className="text-blue-600 hover:text-blue-800 font-medium"
-                              >
-                                Upload Bukti
-                              </button>
-                            )}
-                            {pembayaran.bukti_bayar && (
-                              <a
-                                href={`/storage/bukti_pembayaran/${pembayaran.bukti_bayar}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-green-600 hover:text-green-800 font-medium"
-                              >
-                                Lihat Bukti
-                              </a>
-                            )}
-                            {pembayaran.status_bayar === 'Lunas' && !pembayaran.bukti_bayar && (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
+                      <ClockAlert className="h-6 w-6 text-amber-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-amber-800 text-lg">Jatuh Tempo Mendatang</h3>
+                      <p className="text-amber-700">
+                        {upcomingDueDate.tanggal_tempo ? (
+                          <span>Jatuh tempo pada {formatDate(upcomingDueDate.tanggal_tempo)}</span>
+                        ) : (
+                          <span>Tagihan menunggu pembayaran</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-amber-800">
+                      {formatRupiah(upcomingDueDate.jumlah_bayar)}
+                    </p>
+                    <p className="text-sm text-amber-700">{upcomingDueDate.jenis_pembayaran}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="mt-4 text-center">
-                <Link
-                  href={route('customer.payment.history')}
-                  className="text-[#38adc3] hover:text-[#2e9bb0] font-medium"
-                >
-                  Lihat Semua Riwayat Pembayaran →
-                </Link>
+                <div className="mt-4 flex gap-3">
+                  <Link
+                    href={route('customer.payment.create')}
+                    className="flex-1 bg-amber-600 hover:bg-amber-700 text-white py-2 rounded-lg text-center font-medium transition-colors"
+                  >
+                    Bayar Sekarang
+                  </Link>
+                  <button
+                    onClick={() => openUploadModal(
+                      upcomingDueDate.id_pembayaran,
+                      upcomingDueDate.jenis_pembayaran,
+                      upcomingDueDate.jumlah_bayar
+                    )}
+                    className="flex-1 border border-amber-600 text-amber-600 hover:bg-amber-600 hover:text-white py-2 rounded-lg text-center font-medium transition-colors"
+                  >
+                    Upload Bukti
+                  </button>
+                </div>
               </div>
             </motion.div>
           )}
@@ -1164,105 +1457,142 @@ export default function CustomerDashboard() {
             variants={stagger}
             className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto"
           >
-            {paketInternet.map((paket, index) => (
-              <motion.div
-                key={index}
-                variants={fadeInUp}
-                className={`relative rounded-2xl p-8 border-2 transition-all duration-300 hover:scale-105 ${
-                  paket.populer 
-                    ? 'border-purple-500 shadow-2xl bg-gradient-to-b from-white to-purple-50' 
-                    : 'border-gray-200 shadow-lg hover:shadow-xl'
-                }`}
-              >
-                {paket.populer && (
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
-                      ⭐ POPULER
-                    </span>
-                  </div>
-                )}
-                
-                <div className="text-center mb-6">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">{paket.nama}</h3>
-                   <div className="flex items-baseline justify-center gap-1 mb-4">
-                    <span className="text-4xl font-bold text-gray-900">
-                      {formatRupiah(paket.harga)} 
-                    </span>
-                    <span className="text-gray-600">/bulan</span>
-                  </div>
-                  <p className="text-lg font-semibold bg-gradient-to-r bg-clip-text text-transparent from-blue-600 to-purple-600">
-                    {paket.kecepatan}
-                  </p>
-                </div>
-
-                <ul className="space-y-3 mb-8">
-                  {paket.fitur.map((fitur, fiturIndex) => (
-                    <li key={fiturIndex} className="flex items-center gap-3">
-                      <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-                      <span className="text-gray-700">{fitur}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <Button
-                  className={`w-full py-3 text-lg font-semibold ${
-                    paket.populer
-                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white'
-                      : 'bg-gradient-to-r from-gray-700 to-gray-900 hover:from-gray-800 hover:to-black text-white'
-                  } shadow-lg hover:shadow-xl transition-all duration-300`}
-                  onClick={handleWhatsApp}
+            {paketList && paketList.length > 0 ? (
+              paketList.map((paket, index) => (
+                <motion.div
+                  key={index}
+                  variants={fadeInUp}
+                  className={`relative rounded-2xl p-8 border-2 transition-all duration-300 hover:scale-105 ${
+                    paket.nama_paket === "Standard" 
+                      ? 'border-purple-500 shadow-2xl bg-gradient-to-b from-white to-purple-50' 
+                      : 'border-gray-200 shadow-lg hover:shadow-xl'
+                  }`}
                 >
-                  Pilih Paket
-                  <ChevronRight className="ml-2 h-5 w-5" />
-                </Button>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
+                  {paket.nama_paket === "Standard" && (
+                    <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                      <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
+                        ⭐ POPULER
+                      </span>
+                    </div>
+                  )}
+                  
+                  <div className="text-center mb-6">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">{paket.nama_paket}</h3>
+                    <div className="flex items-baseline justify-center gap-1 mb-4">
+                      <span className="text-4xl font-bold text-gray-900">
+                        {formatRupiah(paket.harga_bulanan)} 
+                      </span>
+                      <span className="text-gray-600">/bulan</span>
+                    </div>
+                    <p className="text-lg font-semibold bg-gradient-to-r bg-clip-text text-transparent from-blue-600 to-purple-600">
+                      {paket.kecepatan}
+                    </p>
+                  </div>
 
-      {/* Fitur Layanan Section */}
-      <section id="fitur" className="py-20 bg-gradient-to-br from-blue-50 to-cyan-50">
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={stagger}
-            className="text-center mb-16"
-          >
-            <motion.h2 variants={fadeInUp} className="text-4xl font-bold mb-4">
-              Keunggulan Layanan
-            </motion.h2>
-            <motion.p variants={fadeInUp} className="text-gray-600 max-w-2xl mx-auto">
-              Mengapa pelanggan memilih ASTINet sebagai provider internet mereka
-            </motion.p>
-          </motion.div>
+                  <ul className="space-y-3 mb-8">
+                    <li className="flex items-center gap-3">
+                      <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      <span className="text-gray-700">Periode 30 hari</span>
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      <span className="text-gray-700">Jatuh tempo tanggal 10</span>
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      <span className="text-gray-700">Unlimited Quota</span>
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      <span className="text-gray-700">Akses 24/7</span>
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      <span className="text-gray-700">Support Teknis</span>
+                    </li>
+                  </ul>
 
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={stagger}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
-          >
-            {fiturLayanan.map((fitur, index) => (
-              <motion.div
-                key={index}
-                variants={fadeInUp}
-                className="text-center p-6 bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100"
-              >
-                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-blue-100 to-cyan-100 flex items-center justify-center ${fitur.color}`}>
-                  {fitur.icon}
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                  {fitur.title}
-                </h3>
-                <p className="text-gray-600 leading-relaxed">
-                  {fitur.description}
-                </p>
-              </motion.div>
-            ))}
+                  <Button
+                    className={`w-full py-3 text-lg font-semibold ${
+                      paket.nama_paket === "Standard"
+                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white'
+                        : 'bg-gradient-to-r from-gray-700 to-gray-900 hover:from-gray-800 hover:to-black text-white'
+                    } shadow-lg hover:shadow-xl transition-all duration-300`}
+                    onClick={handleWhatsApp}
+                  >
+                    Pilih Paket
+                    <ChevronRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </motion.div>
+              ))
+            ) : (
+              // Fallback jika paketList tidak ada
+              [1, 2, 3].map((_, index) => (
+                <motion.div
+                  key={index}
+                  variants={fadeInUp}
+                  className={`relative rounded-2xl p-8 border-2 transition-all duration-300 hover:scale-105 ${
+                    index === 1 
+                      ? 'border-purple-500 shadow-2xl bg-gradient-to-b from-white to-purple-50' 
+                      : 'border-gray-200 shadow-lg hover:shadow-xl'
+                  }`}
+                >
+                  {index === 1 && (
+                    <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                      <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
+                        ⭐ POPULER
+                      </span>
+                    </div>
+                  )}
+                  
+                  <div className="text-center mb-6">
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                      {index === 0 ? 'Basic' : index === 1 ? 'Standard' : 'Premium'}
+                    </h3>
+                    <div className="flex items-baseline justify-center gap-1 mb-4">
+                      <span className="text-4xl font-bold text-gray-900">
+                        {formatRupiah(index === 0 ? 150000 : index === 1 ? 200000 : 250000)} 
+                      </span>
+                      <span className="text-gray-600">/bulan</span>
+                    </div>
+                    <p className="text-lg font-semibold bg-gradient-to-r bg-clip-text text-transparent from-blue-600 to-purple-600">
+                      {index === 0 ? '20 Mbps' : index === 1 ? '30 Mbps' : '50 Mbps'}
+                    </p>
+                  </div>
+
+                  <ul className="space-y-3 mb-8">
+                    <li className="flex items-center gap-3">
+                      <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      <span className="text-gray-700">Periode 30 hari</span>
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      <span className="text-gray-700">Jatuh tempo tanggal 10</span>
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      <span className="text-gray-700">Unlimited Quota</span>
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      <span className="text-gray-700">Akses 24/7</span>
+                    </li>
+                  </ul>
+
+                  <Button
+                    className={`w-full py-3 text-lg font-semibold ${
+                      index === 1
+                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white'
+                        : 'bg-gradient-to-r from-gray-700 to-gray-900 hover:from-gray-800 hover:to-black text-white'
+                    } shadow-lg hover:shadow-xl transition-all duration-300`}
+                    onClick={handleWhatsApp}
+                  >
+                    Pilih Paket
+                    <ChevronRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </motion.div>
+              ))
+            )}
           </motion.div>
         </div>
       </section>
