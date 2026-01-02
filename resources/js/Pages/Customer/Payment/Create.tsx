@@ -1,5 +1,5 @@
 import { useForm } from "@inertiajs/react";
-import { DollarSign, CreditCard, Calendar, FileText, AlertCircle, CheckCircle, Wallet, Banknote, QrCode, Receipt } from "lucide-react";
+import { DollarSign, CreditCard, Calendar, FileText, AlertCircle, CheckCircle, Wallet, Banknote, QrCode, Receipt, ChevronDown, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface CreateProps {
@@ -16,17 +16,26 @@ interface CreateProps {
         harga_bulanan: number;
         kecepatan?: string;
     } | null;
+    bulanOptions: Array<{
+        value: string;
+        label: string;
+        is_current: boolean;
+        is_past: boolean;
+    }>;
+    bulanSudahDibayar: string[];
 }
 
-export default function Create({ pelanggan, paketAktif }: CreateProps) {
+export default function Create({ pelanggan, paketAktif, bulanOptions, bulanSudahDibayar }: CreateProps) {
     const { data, setData, post, processing, errors } = useForm({
         jenis_pembayaran: "Bulanan",
         metode_bayar: "Transfer",
         jumlah_bayar: paketAktif?.harga_bulanan ?? 0,
         keterangan: "",
+        bulan_dibayar: bulanOptions[0]?.value || "",
     });
 
     const [hargaInstalasi, setHargaInstalasi] = useState(250000);
+    const [showMonthDropdown, setShowMonthDropdown] = useState(false);
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -48,8 +57,16 @@ export default function Create({ pelanggan, paketAktif }: CreateProps) {
             setData("jumlah_bayar", paketAktif.harga_bulanan);
         } else if (data.jenis_pembayaran === "Instalasi") {
             setData("jumlah_bayar", hargaInstalasi);
+            setData("bulan_dibayar", ""); // Kosongkan bulan untuk instalasi
         }
     }, [data.jenis_pembayaran]);
+
+    // Set bulan default saat pertama kali load
+    useEffect(() => {
+        if (bulanOptions.length > 0 && !data.bulan_dibayar) {
+            setData("bulan_dibayar", bulanOptions[0].value);
+        }
+    }, [bulanOptions]);
 
     const metodeBayarOptions = [
         { value: "Transfer", label: "Transfer Bank", icon: Banknote, color: "text-blue-600", bgColor: "bg-blue-100" },
@@ -75,6 +92,22 @@ export default function Create({ pelanggan, paketAktif }: CreateProps) {
             bgColor: "bg-green-50"
         },
     ];
+
+    // Filter bulan yang belum dibayar
+    const availableMonths = bulanOptions.filter(month => 
+        !bulanSudahDibayar.includes(month.value)
+    );
+
+    // Get selected month label
+    const getSelectedMonthLabel = () => {
+        const selected = bulanOptions.find(month => month.value === data.bulan_dibayar);
+        return selected ? selected.label : "Pilih Bulan";
+    };
+
+    // Check if month is already paid
+    const isMonthPaid = (monthValue: string) => {
+        return bulanSudahDibayar.includes(monthValue);
+    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-8 px-4 sm:px-6 lg:px-8">
@@ -114,7 +147,13 @@ export default function Create({ pelanggan, paketAktif }: CreateProps) {
                                             <button
                                                 key={option.value}
                                                 type="button"
-                                                onClick={() => setData("jenis_pembayaran", option.value)}
+                                                onClick={() => {
+                                                    setData("jenis_pembayaran", option.value);
+                                                    // Set bulan default jika pilihan Bulanan
+                                                    if (option.value === "Bulanan" && availableMonths.length > 0) {
+                                                        setData("bulan_dibayar", availableMonths[0].value);
+                                                    }
+                                                }}
                                                 className={`p-4 border-2 rounded-xl text-left transition-all duration-200 ${
                                                     data.jenis_pembayaran === option.value
                                                         ? `${option.bgColor} border-${option.color.split('-')[1]}-500 dark:border-${option.color.split('-')[1]}-400`
@@ -146,6 +185,130 @@ export default function Create({ pelanggan, paketAktif }: CreateProps) {
                                         <p className="text-sm text-red-600 dark:text-red-400">{errors.jenis_pembayaran}</p>
                                     )}
                                 </div>
+
+                                {/* Pilihan Bulan (hanya untuk jenis Bulanan) */}
+                                {data.jenis_pembayaran === "Bulanan" && (
+                                    <div className="space-y-3">
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                            <div className="flex items-center gap-2">
+                                                <Calendar className="w-4 h-4" />
+                                                Pilih Bulan Pembayaran
+                                            </div>
+                                        </label>
+                                        
+                                        <div className="relative">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowMonthDropdown(!showMonthDropdown)}
+                                                className={`w-full px-4 py-3 text-left border-2 rounded-xl flex items-center justify-between transition-all ${
+                                                    errors.bulan_dibayar
+                                                        ? 'border-red-500 dark:border-red-500'
+                                                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                                                } bg-gray-50 dark:bg-gray-900`}
+                                            >
+                                                <div className="flex items-center">
+                                                    <Calendar className="w-5 h-5 mr-3 text-gray-500" />
+                                                    <span className="font-medium text-gray-900 dark:text-white">
+                                                        {getSelectedMonthLabel()}
+                                                    </span>
+                                                    {isMonthPaid(data.bulan_dibayar) && (
+                                                        <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
+                                                            Sudah Dibayar
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <ChevronDown className={`w-5 h-5 text-gray-500 transition-transform ${showMonthDropdown ? 'rotate-180' : ''}`} />
+                                            </button>
+                                            
+                                            {showMonthDropdown && (
+                                                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                                                    <div className="p-2">
+                                                        {/* Bulan yang tersedia */}
+                                                        <div className="mb-2">
+                                                            <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                                                Bulan Tersedia
+                                                            </div>
+                                                            {availableMonths.map((month) => (
+                                                                <button
+                                                                    key={month.value}
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setData("bulan_dibayar", month.value);
+                                                                        setShowMonthDropdown(false);
+                                                                    }}
+                                                                    className={`w-full px-3 py-2 text-left rounded-lg flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-800 ${
+                                                                        data.bulan_dibayar === month.value ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                                                                    }`}
+                                                                >
+                                                                    <div className="flex items-center">
+                                                                        {month.is_current && (
+                                                                            <div className="w-2 h-2 rounded-full bg-blue-500 mr-2"></div>
+                                                                        )}
+                                                                        <span className={`font-medium ${month.is_current ? 'text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-white'}`}>
+                                                                            {month.label}
+                                                                        </span>
+                                                                        {month.is_current && (
+                                                                            <span className="ml-2 px-2 py-0.5 text-xs bg-blue-100 text-blue-800 rounded-full">
+                                                                                Bulan Ini
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    {data.bulan_dibayar === month.value && (
+                                                                        <Check className="w-5 h-5 text-blue-600" />
+                                                                    )}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                        
+                                                        {/* Bulan yang sudah dibayar (jika ada) */}
+                                                        {bulanSudahDibayar.length > 0 && (
+                                                            <div>
+                                                                <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                                                    Bulan Sudah Dibayar
+                                                                </div>
+                                                                {bulanOptions
+                                                                    .filter(month => bulanSudahDibayar.includes(month.value))
+                                                                    .map((month) => (
+                                                                        <div
+                                                                            key={month.value}
+                                                                            className="w-full px-3 py-2 text-left rounded-lg flex items-center justify-between opacity-50 cursor-not-allowed"
+                                                                        >
+                                                                            <div className="flex items-center">
+                                                                                <Check className="w-4 h-4 text-green-500 mr-2" />
+                                                                                <span className="text-gray-900 dark:text-white">
+                                                                                    {month.label}
+                                                                                </span>
+                                                                            </div>
+                                                                            <span className="px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded-full">
+                                                                                Lunas
+                                                                            </span>
+                                                                        </div>
+                                                                    ))}
+                                                            </div>
+                                                        )}
+                                                        
+                                                        {availableMonths.length === 0 && (
+                                                            <div className="px-3 py-4 text-center text-gray-500 dark:text-gray-400">
+                                                                <AlertCircle className="w-8 h-8 mx-auto mb-2" />
+                                                                <p className="font-medium">Semua bulan sudah dibayar</p>
+                                                                <p className="text-sm mt-1">Tidak ada tagihan bulanan yang tertunggak</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        
+                                        {errors.bulan_dibayar && (
+                                            <p className="text-sm text-red-600 dark:text-red-400">{errors.bulan_dibayar}</p>
+                                        )}
+                                        
+                                        <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center">
+                                            <AlertCircle className="w-4 h-4 mr-2 text-blue-500" />
+                                            Pilih bulan yang ingin Anda bayar. Bulan yang sudah dibayar tidak dapat dipilih lagi.
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Metode Bayar */}
                                 <div className="space-y-3">
@@ -205,7 +368,7 @@ export default function Create({ pelanggan, paketAktif }: CreateProps) {
                                             } bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white`}
                                             value={data.jumlah_bayar}
                                             onChange={(e) => setData("jumlah_bayar", Number(e.target.value))}
-                                            // readOnly={data.jenis_pembayaran === "Bulanan" && paketAktif}
+                                            readOnly={data.jenis_pembayaran === "Bulanan" && Boolean(paketAktif)}
                                         />
                                         <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                                             <span className="text-gray-500 dark:text-gray-400">IDR</span>
@@ -252,15 +415,21 @@ export default function Create({ pelanggan, paketAktif }: CreateProps) {
                                 {/* Submit Button */}
                                 <button
                                     type="submit"
-                                    disabled={processing}
+                                    disabled={processing || (data.jenis_pembayaran === "Bulanan" && availableMonths.length === 0)}
                                     className={`w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-[1.02] ${
-                                        processing ? 'opacity-75 cursor-not-allowed' : ''
+                                        processing || (data.jenis_pembayaran === "Bulanan" && availableMonths.length === 0)
+                                        ? 'opacity-75 cursor-not-allowed' : ''
                                     }`}
                                 >
                                     {processing ? (
                                         <div className="flex items-center justify-center">
                                             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-3"></div>
                                             Memproses...
+                                        </div>
+                                    ) : data.jenis_pembayaran === "Bulanan" && availableMonths.length === 0 ? (
+                                        <div className="flex items-center justify-center">
+                                            <CheckCircle className="w-5 h-5 mr-3" />
+                                            Semua Bulan Sudah Dibayar
                                         </div>
                                     ) : (
                                         <div className="flex items-center justify-center">
@@ -325,6 +494,20 @@ export default function Create({ pelanggan, paketAktif }: CreateProps) {
                                     </span>
                                 </div>
                                 
+                                {data.jenis_pembayaran === "Bulanan" && data.bulan_dibayar && (
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-gray-600 dark:text-gray-400">Bulan</span>
+                                        <span className="font-semibold text-gray-900 dark:text-white">
+                                            {getSelectedMonthLabel()}
+                                            {isMonthPaid(data.bulan_dibayar) && (
+                                                <span className="ml-1 px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded-full">
+                                                    ✓
+                                                </span>
+                                            )}
+                                        </span>
+                                    </div>
+                                )}
+                                
                                 <div className="flex justify-between items-center">
                                     <span className="text-gray-600 dark:text-gray-400">Metode</span>
                                     <span className="font-semibold text-gray-900 dark:text-white">
@@ -383,6 +566,9 @@ export default function Create({ pelanggan, paketAktif }: CreateProps) {
                                         <li>• Upload bukti pembayaran setelah tagihan dibuat</li>
                                         <li>• Admin akan memverifikasi pembayaran Anda</li>
                                         <li>• Hubungi customer service jika ada kendala</li>
+                                        {data.jenis_pembayaran === "Bulanan" && (
+                                            <li>• Tagihan jatuh tempo tanggal 10 setiap bulan</li>
+                                        )}
                                     </ul>
                                 </div>
                             </div>

@@ -68,6 +68,40 @@ class Pembayaran extends Model
         return $this->belongsTo(PaketInternet::class, 'id_paket', 'id_paket');
     }
 
+    /**
+     * Cek apakah bulan sudah dibayar untuk pelanggan tertentu
+     */
+    public static function isMonthPaid($idPelanggan, $year, $month)
+    {
+        return self::where('id_pelanggan', $idPelanggan)
+            ->where('jenis_pembayaran', 'Bulanan')
+            ->where('status_bayar', 'Lunas')
+            ->whereYear('bulan_dibayar', $year)
+            ->whereMonth('bulan_dibayar', $month)
+            ->exists();
+    }
+
+    /**
+     * Get riwayat bulan yang sudah dibayar
+     */
+    public static function getPaidMonths($idPelanggan)
+    {
+        return self::where('id_pelanggan', $idPelanggan)
+            ->where('jenis_pembayaran', 'Bulanan')
+            ->where('status_bayar', 'Lunas')
+            ->whereNotNull('bulan_dibayar')
+            ->orderBy('bulan_dibayar', 'desc')
+            ->get()
+            ->map(function ($item) {
+                $date = Carbon::parse($item->bulan_dibayar);
+                return [
+                    'date' => $date,
+                    'formatted' => $date->translatedFormat('F Y'),
+                    'pembayaran' => $item
+                ];
+            });
+    }
+
     // ============ ACCESSORS ============
     
     /**
