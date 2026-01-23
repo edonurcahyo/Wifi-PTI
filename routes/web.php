@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\PaketInternetController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\Customer\CustomerDashboardController;
 use App\Http\Controllers\Customer\CustomerProfileController;
+use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Customer\CustomerPaymentController;
 use App\Http\Controllers\Admin\AdminPelangganController;
 use App\Http\Controllers\Admin\AdminPembayaranController;
@@ -41,15 +42,18 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('login', [AdminAuthController::class, 'store'])->name('login.post');
     });
 
-    Route::middleware('auth:admin')->group(function () {
+   Route::middleware('auth:admin')->group(function () {
         Route::post('logout', [AdminAuthController::class, 'destroy'])->name('logout');
         
-        // Dashboard - sesuai struktur folder
-        Route::get('dashboard', function () {
-            return Inertia::render('Admin/Dashboard');
-        })->name('dashboard');
+        // Dashboard dengan controller
+        Route::get('dashboard', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])
+            ->name('dashboard');
         
-        // Paket routes - sesuaikan dengan struktur folder
+        // API untuk statistik real-time
+        Route::get('dashboard/stats', [\App\Http\Controllers\Admin\DashboardController::class, 'getStats'])
+            ->name('dashboard.stats');
+        
+        // Paket routes
         Route::resource('paket', PaketInternetController::class)
             ->parameters(['paket' => 'id_paket']);
 
