@@ -23,7 +23,7 @@
 
 ## 📡 Tentang Wifi-PTI
 
-**Wifi-PTI** adalah sistem manajemen WiFi berbasis web yang dikembangkan menggunakan **Laravel 10** untuk mempermudah pengelolaan dan monitoring jaringan WiFi di lingkungan **PTI (Pendidikan Teknologi Informasi)**.
+**Wifi-PTI** adalah sistem manajemen WiFi berbasis web yang dikembangkan menggunakan **Laravel 10** untuk mempermudah pengelolaan dan monitoring jaringan WiFi.
 
 Aplikasi ini dirancang untuk memberikan solusi terpadu dalam pengelolaan jaringan WiFi dengan antarmuka yang intuitif dan fungsionalitas yang lengkap, menjadikan proses administrasi jaringan lebih **terstruktur, efisien, dan terpusat**.
 
